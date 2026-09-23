@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ChevronRight, CheckCircle2 } from 'lucide-react'
 import { useAppData } from '../AppDataContext'
+import { useAuth } from '../AuthContext'
 import { todayWeekday, isToday } from '../utils/date'
 import { THEME } from '../theme'
 
@@ -10,10 +11,12 @@ const sections = [
   { to: '/planner', theme: THEME.planner, title: 'Planificación', subtitle: 'Tu línea de tiempo semanal' },
   { to: '/progress', theme: THEME.progress, title: 'Progreso', subtitle: 'Consulta tu evolución' },
   { to: '/protein', theme: THEME.protein, title: 'Proteína', subtitle: 'Calculadora y registro diario' },
-  { to: '/backup', theme: THEME.backup, title: 'Backup', subtitle: 'Exporta o importa datos' },
+  { to: '/account', theme: THEME.account, title: 'Cuenta', subtitle: 'Sincroniza entre dispositivos' },
+  /*{ to: '/backup', theme: THEME.backup, title: 'Backup', subtitle: 'Exporta o importa datos' },*/
 ]
 
 export default function HomePage() {
+  const { username } = useAuth()
   const { data } = useAppData()
   const weekday = todayWeekday()
   const routinesToday = (data.weeklyPlan[weekday] ?? [])
@@ -26,7 +29,7 @@ export default function HomePage() {
   return (
     <div className="page home">
       <div className="welcome">
-        <p className="eyebrow">¡Hola! 👋</p>
+        <p className="eyebrow">¡Hola, {username}! 👋</p>
         <h1>Vamos a entrenar</h1>
       </div>
 

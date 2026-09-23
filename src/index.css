@@ -604,3 +604,39 @@ summary { cursor: pointer; color: var(--muted); font-weight: 600; }
 .form-field { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.9rem; }
 .form-field label { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
 .form-field input, .form-field select { width: 100%; }
+/* ----- Cuenta / sincronización ----- */
+.sync-badge {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.35rem 0.8rem; border-radius: 999px;
+  font-size: 0.85rem; font-weight: 600;
+  background: var(--card-alt); color: var(--muted);
+}
+.sync-badge::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.sync-badge.synced { background: var(--success-soft); color: var(--success); }
+.sync-badge.syncing { background: var(--accent-soft); color: var(--accent); }
+.sync-badge.offline, .sync-badge.error { background: rgba(255, 107, 107, 0.14); color: var(--danger); }
+.form-error { color: var(--danger); font-size: 0.9rem; margin: 0.5rem 0; }
+.form-error.small { font-size: 0.8rem; }
+.form-info { color: var(--success); font-size: 0.9rem; margin: 0.5rem 0; }
+
+/* ----- Bienvenida / acceso ----- */
+.landing {
+  min-height: calc(100vh - 6rem);
+  display: flex; flex-direction: column; justify-content: center; gap: 1.75rem;
+  max-width: 440px; margin: 0 auto;
+}
+.landing-brand { display: flex; flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+.landing-brand p { margin: 0; }
+.landing-mark {
+  width: 56px; height: 56px; border-radius: 18px;
+  display: flex; align-items: center; justify-content: center; margin-bottom: 0.4rem;
+}
+.landing h1 { font-size: 2.4rem; margin: 0; font-weight: 800; letter-spacing: -0.02em; }
+.auth-tabs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem; padding: 0.25rem;
+  background: var(--card-alt); border-radius: var(--radius-md); margin-bottom: 1.1rem;
+}
+.auth-tab { background: transparent; border-color: transparent; color: var(--muted); font-weight: 700; }
+.auth-tab.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.auth-submit { width: 100%; padding: 0.8rem; margin: 0.25rem 0 1rem; }
+.landing .chart-card { padding: 1.1rem 1.1rem 1rem; margin-top: 0; }

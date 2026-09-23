@@ -1,6 +1,6 @@
 import React, { useRef } from 'react'
 import { useAppData } from '../AppDataContext'
-import { AppData } from '../types'
+import { AppData, emptyAppData } from '../types'
 import PageHeader from '../components/PageHeader'
 import { THEME } from '../theme'
 
@@ -25,7 +25,8 @@ export default function BackupPage() {
     reader.onload = () => {
       try {
         const parsed = JSON.parse(reader.result as string) as AppData
-        setData(() => parsed)
+        // Se completan las claves que falten (p. ej. un backup anterior a la sección de proteína).
+        setData(() => ({ ...structuredClone(emptyAppData), ...parsed }))
         alert('Datos importados correctamente.')
       } catch {
         alert('El archivo no es un JSON válido.')

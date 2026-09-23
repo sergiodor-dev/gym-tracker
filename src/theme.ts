@@ -1,4 +1,4 @@
-import { Dumbbell, ListChecks, CalendarRange, CalendarDays, TrendingUp, Save, Utensils } from 'lucide-react'
+import { Dumbbell, ListChecks, CalendarRange, CalendarDays, TrendingUp, Save, Utensils, Cloud } from 'lucide-react'
 
 // Tema visual (icono + color) compartido por el widget/tarjetas de Inicio
 // y la cabecera de cada sección, para que cada parte de la app se sienta
@@ -11,4 +11,5 @@ export const THEME = {
   progress: { icon: TrendingUp, bg: '#FCE7F3', fg: '#DB2777' },
   backup: { icon: Save, bg: '#FEF9C3', fg: '#CA8A04' },
   protein: { icon: Utensils, bg: '#FFE4E6', fg: '#E11D48' },
+  account: { icon: Cloud, bg: '#E0F2FE', fg: '#0284C7' },
 }

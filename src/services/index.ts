@@ -1,7 +1,7 @@
-import { LocalStorageService } from './localStorageService'
-import { StorageService } from './storageService'
+import { SyncedStorageService } from './syncedStorageService'
 
 // Punto único de configuración de la persistencia.
-// Cuando llegue la Fase 2, esto pasaría a ser:
-//   export const storageService: StorageService = new SupabaseService()
-export const storageService: StorageService = new LocalStorageService()
+// SyncedStorageService usa localStorage siempre (Fase 1) y, si hay Supabase configurado
+// en src/config.ts y una sesión iniciada, sincroniza además con la nube (Fase 2).
+// Implementa la interfaz StorageService (ver storageService.ts).
+export const storageService = new SyncedStorageService()

@@ -19,4 +19,8 @@ export class LocalStorageService implements StorageService {
   async save(data: AppData): Promise<void> {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
   }
+
+  clear(): void {
+    localStorage.removeItem(STORAGE_KEY)
+  }
 }

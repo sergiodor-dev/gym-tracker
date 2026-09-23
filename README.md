@@ -5,11 +5,10 @@ semanal y registro de series/reps/peso por sesión, con exportación/importació
 
 ## Stack
 
-- React + TypeScript + Vite
-- Persistencia **Fase 1**: `localStorage` del navegador (ver `src/services/`)
-- Pensado para migrar/complementar en **Fase 2** con Supabase sin tocar la UI:
-  solo hay que crear `src/services/supabaseService.ts` implementando la interfaz
-  `StorageService` y cambiar la instancia exportada en `src/services/index.ts`.
+- React + TypeScript + Vite, desplegado en GitHub Pages (`HashRouter`)
+- **Fase 1**: `localStorage` del navegador
+- **Fase 2**: sincronización opcional con Supabase (PostgreSQL + API REST + Auth), hablando
+  con la API por `fetch` directo, sin `supabase-js`
 
 ## Empezar en local
 
@@ -20,37 +19,68 @@ npm run dev
 
 Abre http://localhost:5173
 
-## Desplegar en GitHub Pages
+## Fase 2: activar la sincronización con Supabase
 
-1. Sube este proyecto a un repositorio de GitHub (por ejemplo `gym-tracker`).
-2. Edita `vite.config.ts` y pon en `base` el nombre exacto de tu repo:
-   `base: '/tu-repo/'`.
-3. En GitHub → Settings → Pages, selecciona "Source: GitHub Actions".
-4. Haz push a `main`: el workflow en `.github/workflows/deploy.yml` compilará
-   y publicará automáticamente en `https://tu-usuario.github.io/tu-repo/`.
+Si `src/config.ts` tiene los valores vacíos, la app funciona solo con `localStorage`.
 
-La app usa `HashRouter`, así que funciona directamente en GitHub Pages sin
-configuración de rutas adicional.
+1. Crea un proyecto en https://supabase.com (plan gratuito).
+2. **SQL Editor** → New query → pega `supabase/schema.sql` → Run. Crea las tablas y las
+   políticas RLS (cada usuario solo ve sus filas).
+3. **Project Settings → API**: copia la *Project URL* y la *anon / publishable key* en
+   `src/config.ts`. Es seguro commitearlas: la seguridad la da RLS, no el secreto de la clave.
+   Nunca uses la `service_role` / `secret` key.
+4. **Authentication → Sign In / Providers → Email**: **desactiva "Confirm email"** (obligatorio,
+   ver "Usuario en vez de email").
+5. Despliega como siempre. Al abrir la web aparece la **página de bienvenida**: crea tu cuenta
+   (o inicia sesión) y pasas a Inicio.
 
-## Estructura
+### Acceso y rutas
+
+- Con Supabase configurado, **toda la app exige sesión**: sin ella, cualquier URL
+  (`#/progress`, `#/train`…) redirige a `#/welcome`. Con sesión, `#/welcome` redirige a Inicio.
+- Cerrar sesión (Inicio → Cuenta) te devuelve a la bienvenida.
+- La sesión persiste en el navegador, así que al volver entras directo a Inicio, también sin conexión.
+- Si `src/config.ts` está vacío, no hay login: la app funciona solo en local como en la Fase 1.
+- Guardianes de ruta: `src/components/RouteGuards.tsx`.
+
+### Usuario en vez de email
+
+La app pide **nombre de usuario y contraseña**. Supabase Auth solo identifica por email o
+teléfono, así que internamente el usuario `ana` es la cuenta `ana@gym-tracker.app`
+(dominio configurable en `USERNAME_EMAIL_DOMAIN`, `src/config.ts`). Consecuencias:
+
+- No se envía ningún email, por eso "Confirm email" debe estar desactivado: la dirección es
+  ficticia y una cuenta sin confirmar nunca podría entrar.
+- **No hay recuperación de contraseña.** Si se olvida, la cuenta se pierde (conviene exportar
+  backups en JSON de vez en cuando).
+- Usuario: 3–30 caracteres, letras minúsculas/números/`-`/`_` (no distingue mayúsculas).
+- Si al crear una cuenta Supabase responde "email inválido", su validador no acepta el dominio:
+  prueba con otro en `USERNAME_EMAIL_DOMAIN`.
+- Contraseña: mínimo 6 caracteres (valor por defecto de Supabase).
+
+### Cómo funciona
 
 ```
-src/
-  types.ts                 # Entidades: Exercise, Routine, WeeklyPlan, WorkoutSession...
-  AppDataContext.tsx        # Estado global: carga/guarda automáticamente vía storageService
-  services/
-    storageService.ts       # Interfaz de persistencia (abstracción)
-    localStorageService.ts  # Implementación Fase 1
-    index.ts                # Instancia activa del servicio (único punto a cambiar en Fase 2)
-  pages/
-    WorkoutPage.tsx          # Detecta el día, inicia la rutina y registra series/reps/peso
-    ExercisesPage.tsx        # CRUD de ejercicios
-    RoutinesPage.tsx         # CRUD de rutinas + configuración de series/reps/peso por defecto
-    PlannerPage.tsx           # Asigna rutina(s) a cada día de la semana
-    ProgressPage.tsx          # Historial de entrenamientos por ejercicio
-    BackupPage.tsx            # Exportar/importar JSON
+UI → AppDataContext → SyncedStorageService ─┬─ LocalStorageService  (siempre: caché / modo sin cuenta)
+                                            └─ SupabaseService      (con sesión: nube)
+                                                  └─ supabase/rest.ts, supabase/auth.ts (fetch)
 ```
 
-## Próximos pasos sugeridos
+- La interfaz `StorageService` (`load` / `save`) no cambió; las páginas no saben nada de la nube.
+- `SupabaseService` recuerda lo último sincronizado y en cada guardado solo envía las filas
+  nuevas/modificadas (upsert) y borra las eliminadas. Conflictos: el último en escribir gana.
+- **Primer login**: si la cuenta está vacía, se suben los datos que ya tenías en el dispositivo.
+  Si la cuenta ya tiene datos y el dispositivo también, gana la nube y los datos locales se
+  guardan antes en `localStorage['gym-tracker-data-before-sync']`.
+- **Sin conexión**: los cambios se guardan en el dispositivo y se suben al reconectar
+  (tienen prioridad sobre la nube).
+- **Cerrar sesión** borra los datos del dispositivo (siguen en la nube).
 
-- Fase 2: `supabaseService.ts` + login simple para sincronizar entre dispositivos
+### Limitaciones conocidas
+
+- Con dos dispositivos abiertos a la vez, los cambios del otro aparecen al recargar
+  (botón *Sincronizar ahora* o al volver a la app tras un fallo de conexión), no en tiempo real.
+- Supabase devuelve como máximo 1000 filas por petición; con la retención de 8 semanas no se alcanza.
+- El proyecto gratuito de Supabase se pausa tras una semana sin actividad.
+- No se puede eliminar la cuenta. Cuando se implemente: borrado en cascada de todos los datos relacionados.
+- Al eliminar un ejercicio, los registros de progreso y la lista de ejercicios de las rutinas se quedan huérfanos.
