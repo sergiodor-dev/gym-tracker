@@ -47,7 +47,6 @@ export default function PlannerPage() {
               <div className="timeline-card">
                 <div className="timeline-day-name-row">
                   <span className="timeline-day-name">{WEEKDAY_NAMES[day]}</span>
-                  {day === today && <span className="today-badge">Hoy</span>}
                   {completedToday && <CheckCircle2 size={15} className="day-completed-icon" />}
                 </div>
                 <span className="timeline-day-detail">{filled ? routineNames.join(' · ') : 'Descanso'}</span>

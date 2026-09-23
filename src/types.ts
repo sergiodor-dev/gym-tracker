@@ -1,9 +1,22 @@
 // ----- Entidades del dominio -----
 
+export const MUSCLE_GROUPS = [
+  'Pecho',
+  'Espalda',
+  'Hombro',
+  'Brazo',
+  'Pierna',
+  'Glúteo',
+  'Core',
+  'Cardio',
+] as const
+
+export type MuscleGroup = (typeof MUSCLE_GROUPS)[number]
+
 export interface Exercise {
   id: string
   name: string
-  muscleGroup: string
+  muscleGroup: MuscleGroup | ''
 }
 
 export interface RoutineExercise {

@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAppData } from '../AppDataContext'
 import { generateId } from '../utils/id'
-import { Routine, RoutineExercise } from '../types'
+import { MuscleGroup, Routine, RoutineExercise } from '../types'
 import PageHeader from '../components/PageHeader'
 import Modal from '../components/Modal'
 import Fab from '../components/Fab'
+import MuscleGroupFilter from '../components/MuscleGroupFilter'
 import { THEME } from '../theme'
-import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowRight, ChevronDown, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 
 export default function RoutinesPage() {
   const { data, setData } = useAppData()
@@ -14,7 +16,9 @@ export default function RoutinesPage() {
   const [isNew, setIsNew] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerFilter, setPickerFilter] = useState<MuscleGroup | ''>('')
   const [deleteTarget, setDeleteTarget] = useState<Routine | null>(null)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
 
   function toggleExpanded(routineId: string) {
     setExpandedId((current) => (current === routineId ? null : routineId))
@@ -34,6 +38,12 @@ export default function RoutinesPage() {
     setDraft(null)
     setIsNew(false)
     setPickerOpen(false)
+    setPickerFilter('')
+  }
+
+  function openPicker() {
+    setPickerFilter('')
+    setPickerOpen(true)
   }
 
   function updateName(name: string) {
@@ -47,6 +57,7 @@ export default function RoutinesPage() {
       return { ...d, exercises: [...d.exercises, entry] }
     })
     setPickerOpen(false)
+    setPickerFilter('')
   }
 
   function updateExerciseField(index: number, field: keyof RoutineExercise, value: number) {
@@ -60,6 +71,42 @@ export default function RoutinesPage() {
 
   function removeExercise(index: number) {
     setDraft((d) => (d ? { ...d, exercises: d.exercises.filter((_, i) => i !== index) } : d))
+  }
+
+  function reorderExercise(from: number, to: number) {
+    setDraft((d) => {
+      if (!d) return d
+      const exercises = [...d.exercises]
+      const [moved] = exercises.splice(from, 1)
+      exercises.splice(to, 0, moved)
+      return { ...d, exercises }
+    })
+  }
+
+  function handleDragHandlePointerDown(index: number) {
+    return (e: React.PointerEvent<HTMLSpanElement>) => {
+      e.preventDefault()
+      e.currentTarget.setPointerCapture(e.pointerId)
+      setDragIndex(index)
+    }
+  }
+
+  function handleDragHandlePointerMove(e: React.PointerEvent<HTMLSpanElement>) {
+    if (dragIndex === null) return
+    const target = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null
+    const row = target?.closest('tr[data-exercise-row]') as HTMLElement | null
+    if (!row) return
+    const overIndex = Number(row.dataset.index)
+    if (Number.isNaN(overIndex) || overIndex === dragIndex) return
+    reorderExercise(dragIndex, overIndex)
+    setDragIndex(overIndex)
+  }
+
+  function handleDragHandlePointerUp(e: React.PointerEvent<HTMLSpanElement>) {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+    setDragIndex(null)
   }
 
   function saveDraft() {
@@ -84,9 +131,20 @@ export default function RoutinesPage() {
     setDeleteTarget(null)
   }
 
+  const pickerExercises = pickerFilter
+    ? data.exercises.filter((ex) => ex.muscleGroup === pickerFilter)
+    : data.exercises
+
   return (
     <div className="page">
       <PageHeader title="Rutinas" icon={THEME.routines.icon} color={THEME.routines} showBack={false} />
+
+      <Link to="/exercises" className="quick-link-hint">
+        <span>¿Faltan ejercicios para tu rutina?</span>
+        <span className="quick-link-hint-action">
+          Ir a Ejercicios <ArrowRight size={14} />
+        </span>
+      </Link>
 
       <ul className="list">
         {data.routines.map((r) => {
@@ -156,9 +214,14 @@ export default function RoutinesPage() {
             <input value={draft.name} onChange={(e) => updateName(e.target.value)} placeholder="Ej. Día de pierna" autoFocus />
           </div>
 
+          {draft.exercises.length > 1 && (
+            <p className="muted small drag-hint">Mantén pulsado <GripVertical size={13} className="inline-icon" /> y arrastra para reordenar.</p>
+          )}
+
           <table className="table">
             <thead>
               <tr>
+                <th></th>
                 <th>Ejercicio</th>
                 <th>Series</th>
                 <th>Reps</th>
@@ -170,7 +233,18 @@ export default function RoutinesPage() {
               {draft.exercises.map((re, i) => {
                 const exercise = data.exercises.find((ex) => ex.id === re.exerciseId)
                 return (
-                  <tr key={i}>
+                  <tr key={i} data-exercise-row data-index={i} className={dragIndex === i ? 'dragging-row' : undefined}>
+                    <td className="drag-handle-cell">
+                      <span
+                        className="drag-handle"
+                        onPointerDown={handleDragHandlePointerDown(i)}
+                        onPointerMove={handleDragHandlePointerMove}
+                        onPointerUp={handleDragHandlePointerUp}
+                        onPointerCancel={handleDragHandlePointerUp}
+                      >
+                        <GripVertical size={16} />
+                      </span>
+                    </td>
                     <td>{exercise?.name ?? '(eliminado)'}</td>
                     <td>
                       <input type="number" min={1} value={re.defaultSets}
@@ -191,8 +265,8 @@ export default function RoutinesPage() {
                 )
               })}
               <tr>
-                <td colSpan={5}>
-                  <button type="button" className="add-exercise-row-btn" onClick={() => setPickerOpen(true)}>
+                <td colSpan={6}>
+                  <button type="button" className="add-exercise-row-btn" onClick={openPicker}>
                     <Plus size={16} /> Añadir ejercicio
                   </button>
                 </td>
@@ -208,14 +282,18 @@ export default function RoutinesPage() {
 
       {pickerOpen && (
         <Modal title="Selecciona un ejercicio" onClose={() => setPickerOpen(false)}>
+          <MuscleGroupFilter value={pickerFilter} onChange={setPickerFilter} />
           <div className="routine-picker">
-            {data.exercises.map((ex) => (
+            {pickerExercises.map((ex) => (
               <button key={ex.id} className="routine-option" onClick={() => addExercise(ex.id)}>
                 <span>{ex.name}</span>
                 {ex.muscleGroup && <span className="muted small">{ex.muscleGroup}</span>}
               </button>
             ))}
             {data.exercises.length === 0 && <p className="empty">Aún no hay ejercicios creados.</p>}
+            {data.exercises.length > 0 && pickerExercises.length === 0 && (
+              <p className="empty">No hay ejercicios en ese grupo muscular.</p>
+            )}
           </div>
         </Modal>
       )}

@@ -148,6 +148,55 @@ button, input, select {
 }
 
 .page h1 { font-size: 1.3rem; margin-bottom: 0.25rem; }
+.quick-link-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--card-alt);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.9rem;
+  margin-bottom: 0.9rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+.quick-link-hint:hover { border-color: var(--accent); color: var(--text); }
+.quick-link-hint-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.filter-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.7rem 0 0.9rem; }
+.filter-chip {
+  background: var(--card-alt);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.76rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+}
+.filter-chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.drag-hint { display: flex; align-items: center; gap: 0.3rem; margin: -0.2rem 0 0.6rem; }
+.inline-icon { vertical-align: middle; flex-shrink: 0; }
+.drag-handle-cell { width: 26px; padding-right: 0 !important; padding-left: 0 !important; }
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  cursor: grab;
+  color: var(--muted);
+  touch-action: none;
+}
+.drag-handle:active { cursor: grabbing; color: var(--accent); }
+tr.dragging-row { opacity: 0.5; background: var(--card-alt); }
+
 .muted { color: var(--muted); font-size: 0.9rem; }
 .muted.small { font-size: 0.8rem; }
 .empty { color: var(--muted); font-style: italic; }
@@ -409,6 +458,34 @@ button.danger-solid { background: var(--danger); border-color: var(--danger); co
 
 details { margin-top: 1.5rem; }
 summary { cursor: pointer; color: var(--muted); font-weight: 600; }
+
+/* ----- Gráficas de evolución (Progreso) ----- */
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 0.9rem 0.5rem;
+  margin-top: 0.75rem;
+}
+.chart-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem; }
+.chart-svg { width: 100%; height: auto; display: block; }
+.chart-axis-label { font-size: 8px; fill: var(--muted); }
+
+/* ----- Selector de ejercicio (modal) ----- */
+.picker-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.9rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.picker-trigger:active { transform: scale(0.99); }
 
 /* ----- Botón flotante (+) ----- */
 .fab {

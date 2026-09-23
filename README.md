@@ -53,7 +53,5 @@ src/
 
 ## Próximos pasos sugeridos
 
-- [ ] Gráfica de evolución de peso máximo por ejercicio (Progreso)
-- [ ] Editar/eliminar sesiones ya registradas
-- [ ] Reordenar ejercicios dentro de una rutina (drag & drop)
+- [ ] Calculadora de proteína diaria, se guarda hasta las 6 AM del día siguiente, después se reinicia.
 - [ ] Fase 2: `supabaseService.ts` + login simple para sincronizar entre dispositivos

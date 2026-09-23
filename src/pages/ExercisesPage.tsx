@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useAppData } from '../AppDataContext'
 import { generateId } from '../utils/id'
-import { Exercise } from '../types'
+import { Exercise, MuscleGroup } from '../types'
 import PageHeader from '../components/PageHeader'
 import { THEME } from '../theme'
 import Modal from '../components/Modal'
 import Fab from '../components/Fab'
+import MuscleGroupFilter from '../components/MuscleGroupFilter'
 
-type Draft = { name: string; muscleGroup: string }
+type Draft = { name: string; muscleGroup: MuscleGroup | '' }
 const emptyDraft: Draft = { name: '', muscleGroup: '' }
 
 export default function ExercisesPage() {
@@ -15,6 +16,11 @@ export default function ExercisesPage() {
   const [selected, setSelected] = useState<Exercise | null>(null)
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState<Draft>(emptyDraft)
+  const [filterGroup, setFilterGroup] = useState<MuscleGroup | ''>('')
+
+  const filteredExercises = filterGroup
+    ? data.exercises.filter((ex) => ex.muscleGroup === filterGroup)
+    : data.exercises
 
   function openEdit(ex: Exercise) {
     setSelected(ex)
@@ -37,7 +43,7 @@ export default function ExercisesPage() {
     setData((prev) => ({
       ...prev,
       exercises: prev.exercises.map((ex) =>
-        ex.id === selected.id ? { ...ex, name: draft.name.trim(), muscleGroup: draft.muscleGroup.trim() } : ex
+        ex.id === selected.id ? { ...ex, name: draft.name.trim(), muscleGroup: draft.muscleGroup } : ex
       ),
     }))
     closeModal()
@@ -45,7 +51,7 @@ export default function ExercisesPage() {
 
   function saveNew() {
     if (!draft.name.trim()) return
-    const newExercise: Exercise = { id: generateId(), name: draft.name.trim(), muscleGroup: draft.muscleGroup.trim() }
+    const newExercise: Exercise = { id: generateId(), name: draft.name.trim(), muscleGroup: draft.muscleGroup }
     setData((prev) => ({ ...prev, exercises: [...prev.exercises, newExercise] }))
     closeModal()
   }
@@ -60,8 +66,10 @@ export default function ExercisesPage() {
     <div className="page">
       <PageHeader title="Ejercicios" icon={THEME.exercises.icon} color={THEME.exercises} />
 
+      {data.exercises.length > 0 && <MuscleGroupFilter value={filterGroup} onChange={setFilterGroup} />}
+
       <ul className="list">
-        {data.exercises.map((ex) => (
+        {filteredExercises.map((ex) => (
           <li key={ex.id} className="list-item selectable" onClick={() => openEdit(ex)}>
             <div>
               <strong>{ex.name}</strong>
@@ -71,6 +79,9 @@ export default function ExercisesPage() {
           </li>
         ))}
         {data.exercises.length === 0 && <p className="empty">Aún no hay ejercicios. Pulsa + para añadir uno.</p>}
+        {data.exercises.length > 0 && filteredExercises.length === 0 && (
+          <p className="empty">No hay ejercicios en ese grupo muscular.</p>
+        )}
       </ul>
 
       <Fab onClick={openAdd} />
@@ -88,10 +99,10 @@ export default function ExercisesPage() {
           </div>
           <div className="form-field">
             <label>Grupo muscular</label>
-            <input
+            <MuscleGroupFilter
               value={draft.muscleGroup}
-              onChange={(e) => setDraft({ ...draft, muscleGroup: e.target.value })}
-              placeholder="Ej. Pecho"
+              onChange={(group) => setDraft({ ...draft, muscleGroup: group })}
+              emptyLabel="Sin especificar"
             />
           </div>
           <div className="modal-actions">
