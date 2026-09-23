@@ -8,11 +8,11 @@ import RoutinesPage from './pages/RoutinesPage'
 import PlannerPage from './pages/PlannerPage'
 import ProgressPage from './pages/ProgressPage'
 import BackupPage from './pages/BackupPage'
+import ProteinPage from './pages/ProteinPage'
 
 export default function App() {
   return (
     <AppDataProvider>
-      {/* HashRouter para que funcione directamente en GitHub Pages sin configuración extra */}
       <HashRouter>
         <div className="app-shell">
           <main className="main">
@@ -25,6 +25,7 @@ export default function App() {
                 <Route path="/planner" element={<PlannerPage />} />
                 <Route path="/progress" element={<ProgressPage />} />
                 <Route path="/backup" element={<BackupPage />} />
+                <Route path="/protein" element={<ProteinPage />} />
               </Routes>
             </div>
           </main>

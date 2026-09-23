@@ -9,6 +9,7 @@ const sections = [
   { to: '/routines', theme: THEME.routines, title: 'Rutinas', subtitle: 'Crea y edita rutinas' },
   { to: '/planner', theme: THEME.planner, title: 'Planificación', subtitle: 'Tu línea de tiempo semanal' },
   { to: '/progress', theme: THEME.progress, title: 'Progreso', subtitle: 'Consulta tu evolución' },
+  { to: '/protein', theme: THEME.protein, title: 'Proteína', subtitle: 'Calculadora y registro diario' },
   { to: '/backup', theme: THEME.backup, title: 'Backup', subtitle: 'Exporta o importa datos' },
 ]
 

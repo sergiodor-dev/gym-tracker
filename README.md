@@ -53,5 +53,4 @@ src/
 
 ## Próximos pasos sugeridos
 
-- [ ] Calculadora de proteína diaria, se guarda hasta las 6 AM del día siguiente, después se reinicia.
-- [ ] Fase 2: `supabaseService.ts` + login simple para sincronizar entre dispositivos
+- Fase 2: `supabaseService.ts` + login simple para sincronizar entre dispositivos

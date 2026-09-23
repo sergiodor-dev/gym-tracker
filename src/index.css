@@ -471,6 +471,24 @@ summary { cursor: pointer; color: var(--muted); font-weight: 600; }
 .chart-svg { width: 100%; height: auto; display: block; }
 .chart-axis-label { font-size: 8px; fill: var(--muted); }
 
+/* ----- Calculadora/registro de proteína ----- */
+.protein-summary-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+.protein-consumed { font-size: 2rem; font-weight: 800; line-height: 1; color: var(--text); }
+.protein-unit { font-size: 1rem; font-weight: 700; color: var(--muted); margin-left: 0.2rem; }
+.protein-bar {
+  margin-top: 0.9rem;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--card-alt);
+  overflow: hidden;
+}
+.protein-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--today));
+  transition: width 0.2s ease;
+}
+
 /* ----- Selector de ejercicio (modal) ----- */
 .picker-trigger {
   width: 100%;

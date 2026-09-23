@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { AppData, emptyAppData } from './types'
 import { storageService } from './services'
-import { pruneOldSessions } from './utils/retention'
+import { pruneOldSessions, resyncProteinDay } from './utils/retention'
 
 interface AppDataContextValue {
   data: AppData
@@ -18,10 +18,29 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     storageService.load().then((loaded) => {
       // Por si el backup/storage trae sesiones más viejas que la ventana
-      // de retención (ej. tras importar un JSON antiguo).
-      setDataState({ ...loaded, sessions: pruneOldSessions(loaded.sessions) })
+      // de retención (ej. tras importar un JSON antiguo), o el contador de
+      // proteína quedó de un "día de proteína" anterior (app cerrada desde
+      // antes de las 6 AM).
+      setDataState({
+        ...loaded,
+        sessions: pruneOldSessions(loaded.sessions),
+        protein: resyncProteinDay(loaded.protein),
+      })
       setLoading(false)
     })
+  }, [])
+
+  // Revisa cada minuto si el "día de proteína" ha cambiado (corte a las
+  // 6 AM), por si la app se queda abierta cruzando esa hora sin que haya
+  // otra actualización que dispare el reinicio.
+  useEffect(() => {
+    const id = setInterval(() => {
+      setDataState((prev) => {
+        const protein = resyncProteinDay(prev.protein)
+        return protein === prev.protein ? prev : { ...prev, protein }
+      })
+    }, 60_000)
+    return () => clearInterval(id)
   }, [])
 
   // Guarda automáticamente en cada cambio (tras la carga inicial)
@@ -36,8 +55,9 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       const next = updater(prev)
       // Se recorta el historial en cada actualización (nuevas sesiones,
       // ediciones o importaciones) para mantener siempre como máximo las
-      // últimas PROGRESS_RETENTION_WEEKS semanas de datos.
-      return { ...next, sessions: pruneOldSessions(next.sessions) }
+      // últimas PROGRESS_RETENTION_WEEKS semanas de datos, y se comprueba
+      // que el contador de proteína siga correspondiendo al día actual.
+      return { ...next, sessions: pruneOldSessions(next.sessions), protein: resyncProteinDay(next.protein) }
     })
   }
 

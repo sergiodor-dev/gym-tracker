@@ -56,12 +56,35 @@ export interface WorkoutSession {
   exerciseLogs: ExerciseLog[]
 }
 
+// ----- Calculadora de proteína diaria -----
+// El "día de proteína" no coincide con el día de calendario: se reinicia a
+// las PROTEIN_RESET_HOUR (6:00) del día siguiente, no a medianoche, para
+// cubrir bien a quien come después de las 00:00 (ver utils/date.ts).
+export interface ProteinEntry {
+  id: string
+  grams: number
+  time: string // ISO
+}
+
+export interface ProteinTracker {
+  targetGrams: number // objetivo diario en gramos (0 = sin definir)
+  dayKey: string // clave del día de proteína actual, ver proteinDayKey()
+  entries: ProteinEntry[] // registros del día de proteína actual
+}
+
+export const emptyProteinTracker: ProteinTracker = {
+  targetGrams: 0,
+  dayKey: '',
+  entries: [],
+}
+
 // ----- Estructura completa exportable/importable en JSON -----
 export interface AppData {
   exercises: Exercise[]
   routines: Routine[]
   weeklyPlan: WeeklyPlan
   sessions: WorkoutSession[]
+  protein: ProteinTracker
 }
 
 export const emptyAppData: AppData = {
@@ -69,4 +92,5 @@ export const emptyAppData: AppData = {
   routines: [],
   weeklyPlan: {},
   sessions: [],
+  protein: emptyProteinTracker,
 }
