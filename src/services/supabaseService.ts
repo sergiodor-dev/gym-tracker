@@ -234,4 +234,12 @@ export class SupabaseService implements StorageService {
       this.snapshot[table] = nextSerialized
     }
   }
+
+  // Borra todos los datos del usuario y su cuenta de Supabase Auth mediante la función
+  // RPC de supabase/account_deletion.sql: privilegios elevados en el servidor, pero
+  // acotados a auth.uid() (el usuario de la sesión), así que no hace falta la
+  // service_role key. Tras esto la sesión ya no vale nada (el usuario ya no existe).
+  async deleteAccount(): Promise<void> {
+    await rest('rpc/delete_account', { method: 'POST', body: {} })
+  }
 }

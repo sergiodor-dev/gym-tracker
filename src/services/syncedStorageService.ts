@@ -157,4 +157,17 @@ export class SyncedStorageService implements StorageService {
     this.remoteReady = false
     this.latest = null
   }
+
+  // Borra la cuenta: todos los datos en Supabase (ver SupabaseService.deleteAccount) y,
+  // si eso funciona, también la caché de este dispositivo (ya no pertenece a ninguna
+  // cuenta válida). No hay nada que subir después, así que se cancela el debounce
+  // pendiente en vez de esperar a que termine.
+  async deleteAccount(): Promise<void> {
+    window.clearTimeout(this.timer)
+    await this.remote.deleteAccount()
+    this.local.clear()
+    ;[OWNER_KEY, UNSYNCED_KEY, BACKUP_KEY].forEach((k) => localStorage.removeItem(k))
+    this.remoteReady = false
+    this.latest = null
+  }
 }

@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { useAuth } from '../AuthContext'
 import { useAppData } from '../AppDataContext'
 import { storageService } from '../services'
 import { SyncInfo, useSyncInfo } from '../services/syncStatus'
 import PageHeader from '../components/PageHeader'
+import Modal from '../components/Modal'
 import { THEME } from '../theme'
 
 function syncLabel(sync: SyncInfo): string {
@@ -27,6 +29,9 @@ export default function AccountPage() {
   const { configured, username, session, signOut } = useAuth()
   const { reload } = useAppData()
   const sync = useSyncInfo()
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   async function handleSignOut() {
     await storageService.flush() // intenta subir lo pendiente antes de preguntar
@@ -39,6 +44,32 @@ export default function AccountPage() {
     if (!ok) return
     await storageService.clearDeviceData()
     await signOut() // sin sesión, el guardián de rutas te lleva a Bienvenida
+  }
+
+  function openDeleteConfirm() {
+    setDeleteError(null)
+    setConfirmingDelete(true)
+  }
+
+  function closeDeleteConfirm() {
+    if (deleting) return // no se cierra a mitad de un borrado en curso
+    setConfirmingDelete(false)
+  }
+
+  // Borra la cuenta y todos sus datos en Supabase (ver supabase/account_deletion.sql),
+  // luego la caché local, y por último cierra la sesión en el cliente: con la cuenta ya
+  // borrada, el access token deja de servir para nada, así que solo queda invalidarlo
+  // localmente. Si algo falla (sin conexión, etc.), no se toca nada más y se puede reintentar.
+  async function handleDeleteAccount() {
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await storageService.deleteAccount()
+      await signOut()
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : 'No se pudo eliminar la cuenta.')
+      setDeleting(false)
+    }
   }
 
   return (
@@ -79,7 +110,34 @@ export default function AccountPage() {
               Cerrar sesión
             </button>
           </div>
+          <div className="row">
+            <button type="button" className="danger" onClick={openDeleteConfirm}>
+              Eliminar cuenta
+            </button>
+          </div>
         </>
+      )}
+
+      {confirmingDelete && (
+        <Modal title="Eliminar cuenta" onClose={closeDeleteConfirm}>
+          <p>
+            Esto borra tu cuenta <strong>{username}</strong> y todos tus datos: ejercicios, rutinas,
+            planificación semanal, progreso registrado y proteína.
+          </p>
+          <p className="muted small">
+            Es permanente y no se puede deshacer, ni siquiera contactando con soporte: no hay ninguna
+            copia que recuperar.
+          </p>
+          {deleteError && <p className="form-error small">{deleteError}</p>}
+          <div className="modal-actions">
+            <button className="button-like" onClick={closeDeleteConfirm} disabled={deleting}>
+              Cancelar
+            </button>
+            <button className="danger-solid" onClick={() => void handleDeleteAccount()} disabled={deleting}>
+              {deleting ? 'Eliminando…' : 'Eliminar cuenta'}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   )
