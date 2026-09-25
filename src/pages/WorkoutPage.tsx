@@ -6,6 +6,7 @@ import { generateId } from '../utils/id'
 import { ExerciseLog, Routine, RoutineExercise, SetLog } from '../types'
 import PageHeader from '../components/PageHeader'
 import Modal from '../components/Modal'
+import ConfirmModal from '../components/ConfirmModal'
 import { THEME } from '../theme'
 import { CheckCircle2, Plus, ChevronRight, RotateCcw } from 'lucide-react'
 
@@ -201,16 +202,22 @@ export default function WorkoutPage() {
         )}
 
         {confirmingReset && (
-          <Modal title="Reiniciar rutina" onClose={() => setConfirmingReset(false)}>
-            <p>¿Reiniciar "{activeRoutine.name}"?</p>
-            <p className="muted small">
-              Se borrará el progreso registrado hoy para esta rutina (series, reps y pesos de todos sus ejercicios).
-            </p>
-            <div className="modal-actions">
-              <button className="button-like" onClick={() => setConfirmingReset(false)}>Cancelar</button>
-              <button className="danger-solid" onClick={resetRoutine}>Reiniciar</button>
-            </div>
-          </Modal>
+          <ConfirmModal
+            title="Reiniciar rutina"
+            icon={RotateCcw}
+            message={
+              <>
+                <p>¿Reiniciar "{activeRoutine.name}"?</p>
+                <p className="muted small">
+                  Se borrará el progreso registrado hoy para esta rutina (series, reps y pesos de todos sus
+                  ejercicios).
+                </p>
+              </>
+            }
+            confirmLabel="Reiniciar"
+            onConfirm={resetRoutine}
+            onClose={() => setConfirmingReset(false)}
+          />
         )}
       </div>
     )

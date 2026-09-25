@@ -2,6 +2,7 @@ import React from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import BottomNav from './BottomNav'
+import SyncErrorToast from './SyncErrorToast'
 
 // Solo se exige iniciar sesión si Supabase está configurado (src/config.ts). Sin configurar,
 // la app sigue funcionando solo en local, como en la Fase 1.
@@ -23,6 +24,7 @@ export function ProtectedLayout() {
           <Outlet />
         </div>
       </main>
+      <SyncErrorToast />
       <BottomNav />
     </div>
   )

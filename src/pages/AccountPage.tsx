@@ -3,25 +3,10 @@ import { RefreshCw, LogOut, UserX } from 'lucide-react'
 import { useAuth } from '../AuthContext'
 import { useAppData } from '../AppDataContext'
 import { storageService } from '../services'
-import { SyncInfo, useSyncInfo } from '../services/syncStatus'
+import { syncLabel, useSyncInfo } from '../services/syncStatus'
 import PageHeader from '../components/PageHeader'
-import Modal from '../components/Modal'
+import ConfirmModal from '../components/ConfirmModal'
 import { THEME } from '../theme'
-
-function syncLabel(sync: SyncInfo): string {
-  switch (sync.state) {
-    case 'synced': {
-      const time = sync.lastSync
-        ? new Date(sync.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : ''
-      return time ? `Sincronizado a las ${time}` : 'Sincronizado'
-    }
-    case 'syncing': return 'Sincronizando…'
-    case 'offline': return 'Sin conexión'
-    case 'error': return 'Error de sincronización'
-    default: return 'Solo en este dispositivo'
-  }
-}
 
 // Con Supabase configurado, esta página solo es accesible con sesión iniciada (el login vive
 // en WelcomePage). Aquí se ve el estado de la sincronización y se cierra la sesión.
@@ -33,15 +18,28 @@ export default function AccountPage() {
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false)
+  const [preparingSignOut, setPreparingSignOut] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const [signOutHasUnsynced, setSignOutHasUnsynced] = useState(false)
+
+  // Intenta subir lo pendiente antes de preguntar, para que el aviso de cambios sin
+  // sincronizar (si aparece) refleje el estado real y no uno que un flush a tiempo habría evitado.
+  async function openSignOutConfirm() {
+    setPreparingSignOut(true)
+    await storageService.flush()
+    setPreparingSignOut(false)
+    setSignOutHasUnsynced(storageService.hasUnsyncedChanges)
+    setConfirmingSignOut(true)
+  }
+
+  function closeSignOutConfirm() {
+    if (signingOut) return // no se cierra a mitad de un cierre de sesión en curso
+    setConfirmingSignOut(false)
+  }
+
   async function handleSignOut() {
-    await storageService.flush() // intenta subir lo pendiente antes de preguntar
-    const warning = storageService.hasUnsyncedChanges
-      ? 'Tienes cambios que aún no se han podido sincronizar y se perderán. '
-      : ''
-    const ok = window.confirm(
-      `${warning}Al cerrar sesión se borran los datos de este dispositivo (seguirán guardados en tu cuenta). ¿Continuar?`,
-    )
-    if (!ok) return
+    setSigningOut(true)
     await storageService.clearDeviceData()
     await signOut() // sin sesión, el guardián de rutas te lleva a Bienvenida
   }
@@ -106,8 +104,13 @@ export default function AccountPage() {
             <button type="button" onClick={() => void reload()}>
               <RefreshCw size={16} className="inline-icon" /> Sincronizar ahora
             </button>
-            <button type="button" className="danger" onClick={() => void handleSignOut()}>
-              <LogOut size={16} className="inline-icon" /> Cerrar sesión
+            <button
+              type="button"
+              className="danger"
+              onClick={() => void openSignOutConfirm()}
+              disabled={preparingSignOut}
+            >
+              <LogOut size={16} className="inline-icon" /> {preparingSignOut ? 'Comprobando…' : 'Cerrar sesión'}
             </button>
           </div>
           <div className="row">
@@ -118,26 +121,53 @@ export default function AccountPage() {
         </>
       )}
 
+      {confirmingSignOut && (
+        <ConfirmModal
+          title="Cerrar sesión"
+          icon={LogOut}
+          message={
+            <>
+              <p>
+                Al cerrar sesión se borran los datos de este dispositivo (seguirán guardados en tu cuenta).
+              </p>
+              {signOutHasUnsynced && (
+                <p className="form-error small">
+                  Tienes cambios que aún no se han podido sincronizar y se perderán.
+                </p>
+              )}
+            </>
+          }
+          confirmLabel="Cerrar sesión"
+          confirmingLabel="Cerrando…"
+          confirming={signingOut}
+          onConfirm={() => void handleSignOut()}
+          onClose={closeSignOutConfirm}
+        />
+      )}
+
       {confirmingDelete && (
-        <Modal title="Eliminar cuenta" onClose={closeDeleteConfirm}>
-          <p>
-            Esto borra tu cuenta <strong>{username}</strong> y todos tus datos: ejercicios, rutinas,
-            planificación semanal, progreso registrado y proteína.
-          </p>
-          <p className="muted small">
-            Es permanente y no se puede deshacer, ni siquiera contactando con soporte: no hay ninguna
-            copia que recuperar. Si quieres conservar algo, expórtalo antes en Backup.
-          </p>
-          {deleteError && <p className="form-error small">{deleteError}</p>}
-          <div className="modal-actions">
-            <button className="button-like" onClick={closeDeleteConfirm} disabled={deleting}>
-              Cancelar
-            </button>
-            <button className="danger-solid" onClick={() => void handleDeleteAccount()} disabled={deleting}>
-              {deleting ? 'Eliminando…' : 'Eliminar cuenta'}
-            </button>
-          </div>
-        </Modal>
+        <ConfirmModal
+          title="Eliminar cuenta"
+          icon={UserX}
+          message={
+            <>
+              <p>
+                Esto borra tu cuenta <strong>{username}</strong> y todos tus datos: ejercicios, rutinas,
+                planificación semanal, progreso registrado y proteína.
+              </p>
+              <p className="muted small">
+                Es permanente y no se puede deshacer, ni siquiera contactando con soporte: no hay ninguna
+                copia que recuperar. Si quieres conservar algo, expórtalo antes en Backup.
+              </p>
+            </>
+          }
+          confirmLabel="Eliminar cuenta"
+          confirmingLabel="Eliminando…"
+          confirming={deleting}
+          error={deleteError}
+          onConfirm={() => void handleDeleteAccount()}
+          onClose={closeDeleteConfirm}
+        />
       )}
     </div>
   )

@@ -36,3 +36,20 @@ function subscribe(listener: () => void) {
 export function useSyncInfo(): SyncInfo {
   return useSyncExternalStore(subscribe, getSyncInfo)
 }
+
+// Texto legible del estado de sync, compartido por la página Cuenta y el indicador del
+// BottomNav para que ambos digan siempre lo mismo.
+export function syncLabel(sync: SyncInfo): string {
+  switch (sync.state) {
+    case 'synced': {
+      const time = sync.lastSync
+        ? new Date(sync.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : ''
+      return time ? `Sincronizado a las ${time}` : 'Sincronizado'
+    }
+    case 'syncing': return 'Sincronizando…'
+    case 'offline': return 'Sin conexión'
+    case 'error': return 'Error de sincronización'
+    default: return 'Solo en este dispositivo'
+  }
+}

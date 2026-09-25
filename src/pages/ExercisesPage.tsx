@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { useAppData } from '../AppDataContext'
 import { generateId } from '../utils/id'
 import { Exercise, MuscleGroup } from '../types'
 import PageHeader from '../components/PageHeader'
 import { THEME } from '../theme'
 import Modal from '../components/Modal'
+import ConfirmModal from '../components/ConfirmModal'
 import Fab from '../components/Fab'
 import MuscleGroupFilter from '../components/MuscleGroupFilter'
 
@@ -134,16 +136,21 @@ export default function ExercisesPage() {
       )}
 
       {deleteTarget && (
-        <Modal title="Eliminar ejercicio" onClose={() => setDeleteTarget(null)}>
-          <p>¿De verdad quieres eliminar "{deleteTarget.name}"?</p>
-          <p className="muted small">
-            También se quitará de las rutinas que lo incluyan y se borrará su historial de progreso.
-          </p>
-          <div className="modal-actions">
-            <button className="button-like" onClick={() => setDeleteTarget(null)}>Cancelar</button>
-            <button className="danger-solid" onClick={confirmDelete}>Eliminar</button>
-          </div>
-        </Modal>
+        <ConfirmModal
+          title="Eliminar ejercicio"
+          icon={Trash2}
+          message={
+            <>
+              <p>¿De verdad quieres eliminar "{deleteTarget.name}"?</p>
+              <p className="muted small">
+                También se quitará de las rutinas que lo incluyan y se borrará su historial de progreso.
+              </p>
+            </>
+          }
+          confirmLabel="Eliminar"
+          onConfirm={confirmDelete}
+          onClose={() => setDeleteTarget(null)}
+        />
       )}
     </div>
   )

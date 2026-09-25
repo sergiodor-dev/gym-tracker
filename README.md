@@ -87,3 +87,7 @@ Cuenta → Eliminar cuenta borra la cuenta entera de forma permanente: todos los
   (botón *Sincronizar ahora* o al volver a la app tras un fallo de conexión), no en tiempo real.
 - Supabase devuelve como máximo 1000 filas por petición; con la retención de 8 semanas no se alcanza.
 - El proyecto gratuito de Supabase se pausa tras una semana sin actividad.
+
+### Posibles mejoras a implementar
+
+- Dividir RoutinesPage.tsx. Extraer el formulario de ejercicio-dentro-de-rutina a un componente propio. Extraer la lógica de series/reps/peso por defecto a un hook (useRoutineForm). Dejar RoutinesPage.tsx solo como orquestador de la página.

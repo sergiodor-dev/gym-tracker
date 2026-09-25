@@ -5,6 +5,7 @@ import { generateId } from '../utils/id'
 import { MuscleGroup, Routine, RoutineExercise } from '../types'
 import PageHeader from '../components/PageHeader'
 import Modal from '../components/Modal'
+import ConfirmModal from '../components/ConfirmModal'
 import Fab from '../components/Fab'
 import MuscleGroupFilter from '../components/MuscleGroupFilter'
 import { THEME } from '../theme'
@@ -299,13 +300,14 @@ export default function RoutinesPage() {
       )}
 
       {deleteTarget && (
-        <Modal title="Eliminar rutina" onClose={() => setDeleteTarget(null)}>
-          <p>¿De verdad quieres eliminar la rutina "{deleteTarget.name}"?</p>
-          <div className="modal-actions">
-            <button className="button-like" onClick={() => setDeleteTarget(null)}>Cancelar</button>
-            <button className="danger-solid" onClick={confirmDelete}>Eliminar</button>
-          </div>
-        </Modal>
+        <ConfirmModal
+          title="Eliminar rutina"
+          icon={Trash2}
+          message={<p>¿De verdad quieres eliminar la rutina "{deleteTarget.name}"?</p>}
+          confirmLabel="Eliminar"
+          onConfirm={confirmDelete}
+          onClose={() => setDeleteTarget(null)}
+        />
       )}
     </div>
   )

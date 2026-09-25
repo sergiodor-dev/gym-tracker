@@ -16,6 +16,8 @@ const OWNER_KEY = 'gym-tracker-owner' // id del usuario al que pertenece la cach
 const UNSYNCED_KEY = 'gym-tracker-unsynced' // '1' = hay cambios locales aún sin subir
 const BACKUP_KEY = 'gym-tracker-data-before-sync' // copia de seguridad si se reemplazan datos locales
 const PUSH_DELAY_MS = 600
+const RETRY_BASE_MS = 5_000 // primer reintento a los 5s de un fallo
+const RETRY_MAX_MS = 120_000 // tope de 2 min entre reintentos
 
 function hasContent(d: AppData): boolean {
   return (
@@ -39,6 +41,8 @@ export class SyncedStorageService implements StorageService {
   private remoteReady = false // ¿se descargó ya la nube en esta carga?
   private latest: AppData | null = null
   private timer: number | undefined
+  private retryTimer: number | undefined
+  private retryDelay = RETRY_BASE_MS // crece con cada fallo consecutivo (backoff)
 
   private get userId(): string | null {
     return isSupabaseConfigured ? (getSession()?.user.id ?? null) : null
@@ -55,6 +59,7 @@ export class SyncedStorageService implements StorageService {
 
   async load(): Promise<AppData> {
     window.clearTimeout(this.timer)
+    window.clearTimeout(this.retryTimer)
     this.remoteReady = false
     this.latest = null
 
@@ -94,10 +99,18 @@ export class SyncedStorageService implements StorageService {
 
       localStorage.setItem(OWNER_KEY, uid)
       await this.local.save(result)
+      this.latest = result // para que flush() tenga qué subir si hay cambios pendientes
 
       const pending = this.remote.pendingChanges(result)
       this.setUnsynced(pending)
-      setSyncInfo(pending ? { state: 'syncing' } : { state: 'synced', lastSync: Date.now() })
+      if (pending) {
+        // Había cambios sin subir (p.ej. hechos sin conexión): ahora que la nube
+        // responde, se suben ya en vez de esperar a la próxima edición.
+        setSyncInfo({ state: 'syncing' })
+        void this.flush()
+      } else {
+        setSyncInfo({ state: 'synced', lastSync: Date.now() })
+      }
       return result
     } catch (e) {
       const { offline, message } = describeError(e)
@@ -142,16 +155,32 @@ export class SyncedStorageService implements StorageService {
       await this.remote.save(data)
       if (this.latest === data) this.setUnsynced(false) // por si llegó otro cambio mientras subía
       setSyncInfo({ state: 'synced', lastSync: Date.now() })
+      window.clearTimeout(this.retryTimer)
+      this.retryDelay = RETRY_BASE_MS // el próximo fallo vuelve a empezar por el retardo mínimo
     } catch (e) {
       const { offline, message } = describeError(e)
       setSyncInfo({ state: offline ? 'offline' : 'error', message })
+      this.scheduleRetry()
     }
+  }
+
+  // Reintenta subir lo pendiente con backoff exponencial (5s, 10s, 20s… hasta un tope de
+  // 2 min), para no machacar la API si el fallo persiste, y para no depender solo de que
+  // el usuario edite algo o recupere la conexión para que se vuelva a intentar.
+  private scheduleRetry() {
+    window.clearTimeout(this.retryTimer)
+    this.retryTimer = window.setTimeout(() => {
+      if (this.hasUnsyncedChanges) void this.flush()
+    }, this.retryDelay)
+    this.retryDelay = Math.min(this.retryDelay * 2, RETRY_MAX_MS)
   }
 
   // Para cerrar sesión: intenta subir lo pendiente y borra los datos de este dispositivo
   // (siguen en la nube). Así la siguiente persona/cuenta no ve ni mezcla datos ajenos.
   async clearDeviceData(): Promise<void> {
     await this.flush()
+    window.clearTimeout(this.retryTimer)
+    this.retryDelay = RETRY_BASE_MS
     this.local.clear()
     ;[OWNER_KEY, UNSYNCED_KEY, BACKUP_KEY].forEach((k) => localStorage.removeItem(k))
     this.remoteReady = false
@@ -164,6 +193,8 @@ export class SyncedStorageService implements StorageService {
   // pendiente en vez de esperar a que termine.
   async deleteAccount(): Promise<void> {
     window.clearTimeout(this.timer)
+    window.clearTimeout(this.retryTimer)
+    this.retryDelay = RETRY_BASE_MS
     await this.remote.deleteAccount()
     this.local.clear()
     ;[OWNER_KEY, UNSYNCED_KEY, BACKUP_KEY].forEach((k) => localStorage.removeItem(k))
