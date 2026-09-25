@@ -5,7 +5,7 @@ import { proteinDayKey } from './date'
 // Se mantiene deliberadamente baja para no sobrecargar el almacenamiento
 // (localStorage en Fase 1, y también pensando en Fase 2 con Supabase,
 // donde cada sesión viajará por la API REST).
-export const PROGRESS_RETENTION_WEEKS = 8
+export const PROGRESS_RETENTION_WEEKS = 6
 
 // Descarta las sesiones más antiguas que la ventana de retención, tomando
 // como referencia el momento actual. Se aplica tanto a datos cargados desde

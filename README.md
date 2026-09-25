@@ -82,5 +82,7 @@ UI → AppDataContext → SyncedStorageService ─┬─ LocalStorageService  (s
   (botón *Sincronizar ahora* o al volver a la app tras un fallo de conexión), no en tiempo real.
 - Supabase devuelve como máximo 1000 filas por petición; con la retención de 8 semanas no se alcanza.
 - El proyecto gratuito de Supabase se pausa tras una semana sin actividad.
-- No se puede eliminar la cuenta. Cuando se implemente: borrado en cascada de todos los datos relacionados.
-- Al eliminar un ejercicio, los registros de progreso y la lista de ejercicios de las rutinas se quedan huérfanos.
+
+### Posibles mejoras a implementar
+
+- No se puede eliminar la cuenta. Al eliminar cuenta: borrado en cascada de todos los datos relacionados en bbdd.

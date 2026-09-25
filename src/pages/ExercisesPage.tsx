@@ -17,6 +17,7 @@ export default function ExercisesPage() {
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState<Draft>(emptyDraft)
   const [filterGroup, setFilterGroup] = useState<MuscleGroup | ''>('')
+  const [deleteTarget, setDeleteTarget] = useState<Exercise | null>(null)
 
   const filteredExercises = filterGroup
     ? data.exercises.filter((ex) => ex.muscleGroup === filterGroup)
@@ -56,10 +57,30 @@ export default function ExercisesPage() {
     closeModal()
   }
 
-  function deleteSelected() {
+  function askDelete() {
     if (!selected) return
-    setData((prev) => ({ ...prev, exercises: prev.exercises.filter((ex) => ex.id !== selected.id) }))
+    setDeleteTarget(selected)
     closeModal()
+  }
+
+  function confirmDelete() {
+    if (!deleteTarget) return
+    const id = deleteTarget.id
+    setData((prev) => ({
+      ...prev,
+      exercises: prev.exercises.filter((ex) => ex.id !== id),
+      // Quita el ejercicio eliminado de las rutinas que lo incluyan...
+      routines: prev.routines.map((r) => ({
+        ...r,
+        exercises: r.exercises.filter((re) => re.exerciseId !== id),
+      })),
+      // ...y de los registros de progreso ya guardados.
+      sessions: prev.sessions.map((s) => ({
+        ...s,
+        exerciseLogs: s.exerciseLogs.filter((el) => el.exerciseId !== id),
+      })),
+    }))
+    setDeleteTarget(null)
   }
 
   return (
@@ -106,8 +127,21 @@ export default function ExercisesPage() {
             />
           </div>
           <div className="modal-actions">
-            {selected && <button className="danger" onClick={deleteSelected}>Eliminar</button>}
+            {selected && <button className="danger" onClick={askDelete}>Eliminar</button>}
             <button onClick={adding ? saveNew : saveEdit}>Guardar</button>
+          </div>
+        </Modal>
+      )}
+
+      {deleteTarget && (
+        <Modal title="Eliminar ejercicio" onClose={() => setDeleteTarget(null)}>
+          <p>¿De verdad quieres eliminar "{deleteTarget.name}"?</p>
+          <p className="muted small">
+            También se quitará de las rutinas que lo incluyan y se borrará su historial de progreso.
+          </p>
+          <div className="modal-actions">
+            <button className="button-like" onClick={() => setDeleteTarget(null)}>Cancelar</button>
+            <button className="danger-solid" onClick={confirmDelete}>Eliminar</button>
           </div>
         </Modal>
       )}
