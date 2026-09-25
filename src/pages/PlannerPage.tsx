@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAppData } from '../AppDataContext'
-import { WEEKDAY_NAMES, todayWeekday, isToday } from '../utils/date'
+import { WEEKDAY_NAMES, todayWeekday } from '../utils/date'
+import { isRoutineCompletedToday } from '../utils/sessions'
 import PageHeader from '../components/PageHeader'
 import { THEME } from '../theme'
 import Modal from '../components/Modal'
@@ -30,12 +31,13 @@ export default function PlannerPage() {
       <div className="timeline">
         {dayOrder.map((day) => {
           const routineIds = data.weeklyPlan[day] ?? []
-          const routineNames = routineIds
-            .map((id) => data.routines.find((r) => r.id === id)?.name)
-            .filter((name): name is string => Boolean(name))
+          const dayRoutines = routineIds
+            .map((id) => data.routines.find((r) => r.id === id))
+            .filter((r): r is NonNullable<typeof r> => Boolean(r))
+          const routineNames = dayRoutines.map((r) => r.name)
           const filled = routineNames.length > 0
-          const completedToday = day === today && filled && routineIds.every((id) =>
-            data.sessions.some((s) => s.routineId === id && isToday(s.date))
+          const completedToday = day === today && filled && dayRoutines.every((r) =>
+            isRoutineCompletedToday(r, data.sessions)
           )
           return (
             <div

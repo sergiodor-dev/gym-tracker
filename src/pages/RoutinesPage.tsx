@@ -137,7 +137,7 @@ export default function RoutinesPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Rutinas" icon={THEME.routines.icon} color={THEME.routines} showBack={false} />
+      <PageHeader title="Rutinas" icon={THEME.routines.icon} color={THEME.routines} />
 
       <Link to="/exercises" className="quick-link-hint">
         <span>¿Faltan ejercicios para tu rutina?</span>

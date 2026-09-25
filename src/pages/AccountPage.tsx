@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, LogOut, UserX } from 'lucide-react'
 import { useAuth } from '../AuthContext'
 import { useAppData } from '../AppDataContext'
 import { storageService } from '../services'
@@ -107,12 +107,12 @@ export default function AccountPage() {
               <RefreshCw size={16} className="inline-icon" /> Sincronizar ahora
             </button>
             <button type="button" className="danger" onClick={() => void handleSignOut()}>
-              Cerrar sesión
+              <LogOut size={16} className="inline-icon" /> Cerrar sesión
             </button>
           </div>
           <div className="row">
             <button type="button" className="danger" onClick={openDeleteConfirm}>
-              Eliminar cuenta
+              <UserX size={16} className="inline-icon" /> Eliminar cuenta
             </button>
           </div>
         </>
@@ -126,7 +126,7 @@ export default function AccountPage() {
           </p>
           <p className="muted small">
             Es permanente y no se puede deshacer, ni siquiera contactando con soporte: no hay ninguna
-            copia que recuperar.
+            copia que recuperar. Si quieres conservar algo, expórtalo antes en Backup.
           </p>
           {deleteError && <p className="form-error small">{deleteError}</p>}
           <div className="modal-actions">

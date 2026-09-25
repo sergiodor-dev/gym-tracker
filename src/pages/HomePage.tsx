@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom'
 import { ChevronRight, CheckCircle2 } from 'lucide-react'
 import { useAppData } from '../AppDataContext'
 import { useAuth } from '../AuthContext'
-import { todayWeekday, isToday } from '../utils/date'
+import { todayWeekday } from '../utils/date'
+import { isRoutineCompletedToday } from '../utils/sessions'
 import { THEME } from '../theme'
 
 const sections = [
@@ -23,7 +24,7 @@ export default function HomePage() {
     .map((id) => data.routines.find((r) => r.id === id))
     .filter((r): r is NonNullable<typeof r> => Boolean(r))
   const allCompletedToday = routinesToday.length > 0 && routinesToday.every((r) =>
-    data.sessions.some((s) => s.routineId === r.id && isToday(s.date))
+    isRoutineCompletedToday(r, data.sessions)
   )
 
   return (

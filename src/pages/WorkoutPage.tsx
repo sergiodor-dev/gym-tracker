@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAppData } from '../AppDataContext'
 import { todayWeekday, isToday, WEEKDAY_NAMES } from '../utils/date'
+import { isRoutineCompletedToday } from '../utils/sessions'
 import { generateId } from '../utils/id'
 import { ExerciseLog, Routine, RoutineExercise, SetLog } from '../types'
 import PageHeader from '../components/PageHeader'
@@ -22,10 +23,6 @@ export default function WorkoutPage() {
   const [confirmingReset, setConfirmingReset] = useState(false)
 
   const activeRoutine = data.routines.find((r) => r.id === activeRoutineId) ?? null
-
-  function isRoutineCompletedToday(routineId: string) {
-    return data.sessions.some((s) => s.routineId === routineId && isToday(s.date))
-  }
 
   function startRoutine(routine: Routine) {
     const existing = data.sessions.find((s) => s.routineId === routine.id && isToday(s.date))
@@ -230,7 +227,7 @@ export default function WorkoutPage() {
 
       <ul className="list">
         {todaysRoutines.map((r) => {
-          const completed = isRoutineCompletedToday(r.id)
+          const completed = isRoutineCompletedToday(r, data.sessions)
           return (
             <li key={r.id} className="list-item selectable" onClick={() => startRoutine(r)}>
               <div>
