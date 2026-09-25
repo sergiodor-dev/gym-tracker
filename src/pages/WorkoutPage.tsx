@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useAppData } from '../AppDataContext'
 import { todayWeekday, isToday, WEEKDAY_NAMES } from '../utils/date'
 import { generateId } from '../utils/id'
@@ -6,7 +6,7 @@ import { ExerciseLog, Routine, RoutineExercise, SetLog } from '../types'
 import PageHeader from '../components/PageHeader'
 import Modal from '../components/Modal'
 import { THEME } from '../theme'
-import { CheckCircle2, Plus, ChevronRight } from 'lucide-react'
+import { CheckCircle2, Plus, ChevronRight, RotateCcw } from 'lucide-react'
 
 export default function WorkoutPage() {
   const { data, setData } = useAppData()
@@ -19,6 +19,7 @@ export default function WorkoutPage() {
   const [logs, setLogs] = useState<Record<string, SetLog[]>>({})
   const [completedIds, setCompletedIds] = useState<string[]>([])
   const [editingExercise, setEditingExercise] = useState<{ exerciseId: string; sets: SetLog[] } | null>(null)
+  const [confirmingReset, setConfirmingReset] = useState(false)
 
   const activeRoutine = data.routines.find((r) => r.id === activeRoutineId) ?? null
 
@@ -37,6 +38,7 @@ export default function WorkoutPage() {
       setLogs({})
       setCompletedIds([])
     }
+    setConfirmingReset(false)
     setActiveRoutineId(routine.id)
   }
 
@@ -72,28 +74,17 @@ export default function WorkoutPage() {
     })
   }
 
-  function saveExercise() {
-    if (!editingExercise) return
-    const { exerciseId, sets } = editingExercise
-    setLogs((prev) => ({ ...prev, [exerciseId]: sets }))
-    setCompletedIds((prev) => (prev.includes(exerciseId) ? prev : [...prev, exerciseId]))
-    setEditingExercise(null)
-  }
-
-  // Cuando todos los ejercicios de la rutina activa están completados,
-  // se guarda (o actualiza) la sesión de forma automática para el progreso.
-  useEffect(() => {
-    if (!activeRoutine) return
-    const allDone = activeRoutine.exercises.length > 0 && activeRoutine.exercises.every((re) => completedIds.includes(re.exerciseId))
-    if (!allDone) return
-
-    const exerciseLogs: ExerciseLog[] = activeRoutine.exercises.map((re) => ({
-      exerciseId: re.exerciseId,
-      sets: logs[re.exerciseId] ?? [],
-    }))
+  // Guarda (o actualiza) la sesión de hoy con los ejercicios completados hasta
+  // el momento, aunque la rutina no se haya terminado todavía. Así, si se
+  // cambia de sección a mitad de entrenamiento, lo ya registrado no se pierde:
+  // al volver a "Entrenar", `startRoutine` recupera estos datos parciales.
+  function persistSession(routine: Routine, logsMap: Record<string, SetLog[]>, completed: string[]) {
+    const exerciseLogs: ExerciseLog[] = routine.exercises
+      .filter((re) => completed.includes(re.exerciseId))
+      .map((re) => ({ exerciseId: re.exerciseId, sets: logsMap[re.exerciseId] ?? [] }))
 
     setData((prev) => {
-      const existingSession = prev.sessions.find((s) => s.routineId === activeRoutine.id && isToday(s.date))
+      const existingSession = prev.sessions.find((s) => s.routineId === routine.id && isToday(s.date))
       if (existingSession) {
         return {
           ...prev,
@@ -102,11 +93,35 @@ export default function WorkoutPage() {
       }
       return {
         ...prev,
-        sessions: [...prev.sessions, { id: generateId(), routineId: activeRoutine.id, date: new Date().toISOString(), exerciseLogs }],
+        sessions: [...prev.sessions, { id: generateId(), routineId: routine.id, date: new Date().toISOString(), exerciseLogs }],
       }
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [completedIds, logs, activeRoutine?.id])
+  }
+
+  // Borra el progreso de hoy para la rutina activa: limpia el estado local y
+  // elimina la sesión de hoy (si existe) para que no quede como completada
+  // ni conserve series antiguas. Útil para volver a entrenarla desde cero.
+  function resetRoutine() {
+    if (!activeRoutine) return
+    setLogs({})
+    setCompletedIds([])
+    setData((prev) => ({
+      ...prev,
+      sessions: prev.sessions.filter((s) => !(s.routineId === activeRoutine.id && isToday(s.date))),
+    }))
+    setConfirmingReset(false)
+  }
+
+  function saveExercise() {
+    if (!editingExercise || !activeRoutine) return
+    const { exerciseId, sets } = editingExercise
+    const nextLogs = { ...logs, [exerciseId]: sets }
+    const nextCompletedIds = completedIds.includes(exerciseId) ? completedIds : [...completedIds, exerciseId]
+    setLogs(nextLogs)
+    setCompletedIds(nextCompletedIds)
+    setEditingExercise(null)
+    persistSession(activeRoutine, nextLogs, nextCompletedIds)
+  }
 
   if (activeRoutine) {
     const allDone = activeRoutine.exercises.length > 0 && activeRoutine.exercises.every((re) => completedIds.includes(re.exerciseId))
@@ -117,6 +132,12 @@ export default function WorkoutPage() {
       <div className="page">
         <PageHeader title={activeRoutine.name} icon={THEME.train.icon} color={THEME.train} onBack={() => setActiveRoutineId(null)} />
         <p className="muted">{WEEKDAY_NAMES[weekday]} — {completedIds.length}/{activeRoutine.exercises.length} ejercicios completados</p>
+
+        {completedIds.length > 0 && (
+          <button type="button" className="button-like" onClick={() => setConfirmingReset(true)}>
+            <RotateCcw size={16} /> Reiniciar rutina
+          </button>
+        )}
 
         {allDone && (
           <div className="completion-banner">
@@ -178,6 +199,19 @@ export default function WorkoutPage() {
             </table>
             <div className="modal-actions">
               <button onClick={saveExercise}>Guardar ejercicio</button>
+            </div>
+          </Modal>
+        )}
+
+        {confirmingReset && (
+          <Modal title="Reiniciar rutina" onClose={() => setConfirmingReset(false)}>
+            <p>¿Reiniciar "{activeRoutine.name}"?</p>
+            <p className="muted small">
+              Se borrará el progreso registrado hoy para esta rutina (series, reps y pesos de todos sus ejercicios).
+            </p>
+            <div className="modal-actions">
+              <button className="button-like" onClick={() => setConfirmingReset(false)}>Cancelar</button>
+              <button className="danger-solid" onClick={resetRoutine}>Reiniciar</button>
             </div>
           </Modal>
         )}
