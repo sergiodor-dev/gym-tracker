@@ -199,6 +199,8 @@ tr.dragging-row { opacity: 0.5; background: var(--card-alt); }
 
 .muted { color: var(--muted); font-size: 0.9rem; }
 .muted.small { font-size: 0.8rem; }
+
+.app-version { color: var(--muted); font-size: 0.75rem; text-align: center; margin-top: 2rem; opacity: 0.6; }
 .empty { color: var(--muted); font-style: italic; }
 
 .row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0; }

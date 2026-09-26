@@ -72,7 +72,7 @@ export default function AccountPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Cuenta" icon={THEME.account.icon} color={THEME.account} />
+      <PageHeader title="Cuenta" icon={THEME.account.icon} color={THEME.account} showBack={false}/>
 
       {!configured && (
         <div className="chart-card">
@@ -169,6 +169,8 @@ export default function AccountPage() {
           onClose={closeDeleteConfirm}
         />
       )}
+
+      <p className="app-version">v{__APP_VERSION__}</p>
     </div>
   )
 }

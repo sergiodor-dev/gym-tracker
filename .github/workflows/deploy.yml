@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -14,10 +14,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Necesario para poder hacer commit y push de vuelta (bump de versión) más abajo.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm ci
+
+      # Sube automáticamente el número de versión (patch) en cada push a main y lo
+      # deja commiteado en el repo, antes de construir, para que quede grabado en el
+      # build de esa versión. "[skip ci]" evita que este mismo commit relance el workflow.
+      - name: Bump version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          npm version patch --no-git-tag-version
+          VERSION=$(node -p "require('./package.json').version")
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to $VERSION [skip ci]"
+          git push
+
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
