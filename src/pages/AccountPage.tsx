@@ -109,7 +109,11 @@ export default function AccountPage() {
             )}
           </div>
           <div className="row">
-            <button type="button" onClick={() => void reload()}>
+            <button
+              type="button"
+              onClick={() => void reload()}
+              style={{ background: THEME.account.fg, borderColor: THEME.account.fg }}
+            >
               <RefreshCw size={16} className="inline-icon" /> Sincronizar ahora
             </button>
             <button

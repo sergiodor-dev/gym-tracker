@@ -207,7 +207,7 @@ export default function RoutinesPage() {
         {data.routines.length === 0 && <p className="empty">Aún no hay rutinas. Pulsa + para crear una.</p>}
       </ul>
 
-      <Fab onClick={openAdd} />
+      <Fab onClick={openAdd} color={THEME.routines.fg} />
 
       {draft && (
         <Modal title={isNew ? 'Nueva rutina' : 'Editar rutina'} onClose={closeModal}>

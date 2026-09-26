@@ -94,7 +94,7 @@ export default function ExercisesPage() {
         )}
       </ul>
 
-      <Fab onClick={openAdd} />
+      <Fab onClick={openAdd} color={THEME.exercises.fg} />
 
       {(selected || adding) && (
         <Modal title={adding ? 'Nuevo ejercicio' : 'Editar ejercicio'} onClose={closeModal}>

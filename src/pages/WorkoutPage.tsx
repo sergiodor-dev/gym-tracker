@@ -8,7 +8,7 @@ import PageHeader from '../components/PageHeader'
 import Modal from '../components/Modal'
 import ConfirmModal from '../components/ConfirmModal'
 import { THEME } from '../theme'
-import { CheckCircle2, Plus, ChevronRight, RotateCcw } from 'lucide-react'
+import { CheckCircle2, Plus, ChevronRight, RotateCcw, Trash2 } from 'lucide-react'
 
 export default function WorkoutPage() {
   const { data, setData, exerciseMap } = useAppData()
@@ -129,19 +129,21 @@ export default function WorkoutPage() {
     return (
       <div className="page">
         <PageHeader title={activeRoutine.name} icon={THEME.train.icon} color={THEME.train} onBack={() => setActiveRoutineId(null)} />
-        <p className="muted">{WEEKDAY_NAMES[weekday]} — {completedIds.length}/{activeRoutine.exercises.length} ejercicios completados</p>
+        <div className="routine-status">
+          <p className="muted">{WEEKDAY_NAMES[weekday]} — {completedIds.length}/{activeRoutine.exercises.length} ejercicios completados</p>
 
-        {completedIds.length > 0 && (
-          <button type="button" className="button-like" onClick={() => setConfirmingReset(true)}>
-            <RotateCcw size={16} /> Reiniciar rutina
-          </button>
-        )}
+          {completedIds.length > 0 && (
+            <button type="button" className="button-like" onClick={() => setConfirmingReset(true)}>
+              <RotateCcw size={16} /> Reiniciar rutina
+            </button>
+          )}
 
-        {allDone && (
-          <div className="completion-banner">
-            <CheckCircle2 size={20} /> Rutina completada
-          </div>
-        )}
+          {allDone && (
+            <div className="completion-banner">
+              <CheckCircle2 size={20} /> Rutina completada
+            </div>
+          )}
+        </div>
 
         <ul className="list">
           {activeRoutine.exercises.map((re) => {
@@ -181,8 +183,16 @@ export default function WorkoutPage() {
                       <input type="number" min={0} step={0.5} value={s.weight}
                         onChange={(e) => updateDraftSet(i, 'weight', Number(e.target.value))} />
                     </td>
-                    <td>
-                      <button className="danger" disabled={editingExercise.sets.length <= 1} onClick={() => removeDraftSet(i)}>✕</button>
+                    <td className="drag-handle-cell">
+                      <button
+                        type="button"
+                        className="icon-btn danger-icon"
+                        disabled={editingExercise.sets.length <= 1}
+                        onClick={() => removeDraftSet(i)}
+                        aria-label="Eliminar serie"
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </td>
                   </tr>
                 ))}

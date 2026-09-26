@@ -99,7 +99,14 @@ export default function ProteinPage() {
       <p className="muted small" style={{ marginTop: '1rem' }}>Añadir rápido</p>
       <div className="row">
         {QUICK_AMOUNTS.map((g) => (
-          <button key={g} type="button" onClick={() => addGrams(g)}>+{g}g</button>
+          <button
+            key={g}
+            type="button"
+            onClick={() => addGrams(g)}
+            style={{ background: THEME.protein.fg, borderColor: THEME.protein.fg }}
+          >
+            +{g}g
+          </button>
         ))}
         <input
           type="number"
