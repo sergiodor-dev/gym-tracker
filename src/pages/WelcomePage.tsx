@@ -5,25 +5,29 @@ import { THEME } from '../theme'
 
 type Mode = 'signin' | 'signup'
 
-// Supabase responde en inglés; se traducen los errores más habituales.
+const HIGHLIGHTS = [
+  { ...THEME.train, label: 'Ejercicios y rutinas' },
+  { ...THEME.planner, label: 'Planificación semanal' },
+  { ...THEME.progress, label: 'Progreso visual' },
+  { ...THEME.protein, label: 'Proteína diaria' },
+]
+
 function friendlyAuthError(message: string): string {
   const m = message.toLowerCase()
   if (m.includes('invalid login credentials')) return 'Usuario o contraseña incorrectos.'
   if (m.includes('email not confirmed')) {
-    return 'Tu proyecto de Supabase exige confirmar el email. Desactiva "Confirm email" (ver README) y crea la cuenta de nuevo.'
+    return 'La base de datos exige confirmar el email. Contacte con el administrador para arreglar el problema.'
   }
   if (m.includes('already registered')) return 'Ese nombre de usuario ya está en uso. Elige otro o inicia sesión.'
   if (m.includes('is invalid') || m.includes('email_address_invalid')) {
-    return 'Supabase ha rechazado el dominio interno del usuario. Cambia USERNAME_EMAIL_DOMAIN en src/config.ts.'
+    return 'La base de datos ha rechazado el usuario.'
   }
   if (m.includes('password should be at least')) return 'La contraseña debe tener al menos 6 caracteres.'
-  if (m.includes('rate limit')) return 'Demasiados intentos. Espera un momento y vuelve a probar.'
+  if (m.includes('rate limit')) return 'Demasiados intentos. Espera un momento y vuelve a intentarlo.'
   if (m.includes('failed to fetch') || m.includes('networkerror')) return 'No se pudo conectar. Revisa tu conexión.'
   return message
 }
 
-// Puerta de entrada de la app. Al iniciar sesión o crear la cuenta, el guardián de rutas
-// (components/RouteGuards.tsx) redirige solo a Inicio: aquí no hace falta navegar.
 export default function WelcomePage() {
   const { signIn, signUp } = useAuth()
   const [mode, setMode] = useState<Mode>('signin')
@@ -32,7 +36,6 @@ export default function WelcomePage() {
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const Mark = THEME.train.icon
 
   function switchMode(next: Mode) {
     setMode(next)
@@ -53,7 +56,7 @@ export default function WelcomePage() {
       if (mode === 'signin') {
         await signIn(username, password)
       } else if ((await signUp(username, password)) === 'confirm-email') {
-        setError('Tu proyecto de Supabase exige confirmar el email, y aquí no se envía ninguno. Desactiva "Confirm email" (ver README).')
+        setError('La base de datos exige confirmar el email. Contacte con el administrador para arreglar el problema.')
       }
     } catch (err) {
       setError(friendlyAuthError(err instanceof Error ? err.message : String(err)))
@@ -67,11 +70,24 @@ export default function WelcomePage() {
   return (
     <div className="landing">
       <div className="landing-brand">
-        <span className="landing-mark" style={{ background: THEME.train.bg, color: THEME.train.fg }}>
-          <Mark size={28} strokeWidth={2.2} />
-        </span>
-        <h1>Gym Tracker</h1>
-        <p className="muted">Registra tus entrenamientos y consúltalos desde cualquier dispositivo.</p>
+        <div className="landing-logo-row">
+          <span className="landing-mark">
+            <img src={`${import.meta.env.BASE_URL}favicon.svg`} width={60} height={60} alt="" />
+          </span>
+          <div>
+            <h1 className="landing-wordmark">
+              Gym<span className="landing-wordmark-accent">Tracker</span>
+            </h1>
+            <span className="landing-tagline">Tu entrenamiento en un solo lugar</span>
+          </div>
+        </div>
+        <div className="landing-features">
+          {HIGHLIGHTS.map(({ icon: Icon, fg, label }) => (
+            <span key={label} className="landing-feature" style={{ color: fg }}>
+              <Icon size={14} strokeWidth={2.4} /> {label}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="chart-card">
@@ -144,13 +160,6 @@ export default function WelcomePage() {
             {busy ? 'Un momento…' : signup ? 'Crear cuenta' : 'Iniciar sesión'}
           </button>
         </form>
-
-        <p className="muted small" style={{ marginBottom: 0 }}>
-          {signup
-            ? 'Sin email no hay recuperación de contraseña: si la olvidas, no podrás recuperar la cuenta. '
-            : ''}
-          Si ya tenías datos en este dispositivo, se subirán a tu cuenta la primera vez.
-        </p>
       </div>
     </div>
   )

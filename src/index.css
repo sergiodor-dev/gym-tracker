@@ -43,7 +43,11 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 1px 1px, rgba(139, 124, 246, 0.16) 1px, transparent 0) 0 0 / 26px 26px,
+    radial-gradient(900px circle at 14% -10%, rgba(139, 124, 246, 0.18), transparent 60%),
+    radial-gradient(700px circle at 88% 105%, rgba(34, 211, 238, 0.12), transparent 60%),
+    var(--bg);
   color: var(--text);
 }
 
@@ -731,13 +735,27 @@ summary { cursor: pointer; color: var(--muted); font-weight: 600; }
   display: flex; flex-direction: column; justify-content: center; gap: 1.75rem;
   max-width: 440px; margin: 0 auto;
 }
-.landing-brand { display: flex; flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+.landing-brand { display: flex; flex-direction: column; align-items: flex-start; gap: 0.9rem; }
 .landing-brand p { margin: 0; }
+.landing-logo-row { display: flex; align-items: center; gap: 0.9rem; }
 .landing-mark {
-  width: 56px; height: 56px; border-radius: 18px;
-  display: flex; align-items: center; justify-content: center; margin-bottom: 0.4rem;
+  display: flex; flex-shrink: 0;
+  filter: drop-shadow(0 10px 26px rgba(139, 124, 246, 0.45));
 }
-.landing h1 { font-size: 2.4rem; margin: 0; font-weight: 800; letter-spacing: -0.02em; }
+.landing-mark img { display: block; border-radius: 18px; }
+.landing-wordmark { font-size: 2.1rem; margin: 0; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+.landing-wordmark-accent { color: var(--accent); }
+.landing-tagline {
+  display: inline-block; margin-top: 0.3rem; color: var(--muted); font-weight: 600; font-size: var(--fs-sm);
+}
+.landing-features { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.landing-feature {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.4rem 0.7rem; border-radius: 999px;
+  background: var(--card-alt); border: 1px solid var(--border);
+  font-size: var(--fs-xs); font-weight: 700; color: var(--text);
+}
+.landing-feature svg { flex-shrink: 0; }
 .auth-tabs {
   display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem; padding: 0.25rem;
   background: var(--card-alt); border-radius: var(--radius-md); margin-bottom: 1.1rem;
@@ -745,4 +763,16 @@ summary { cursor: pointer; color: var(--muted); font-weight: 600; }
 .auth-tab { background: transparent; border-color: transparent; color: var(--muted); font-weight: 700; }
 .auth-tab.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .auth-submit { width: 100%; padding: 0.8rem; margin: 0.25rem 0 1rem; }
-.landing .chart-card { padding: 1.1rem 1.1rem 1rem; margin-top: 0; }
+.landing .chart-card {
+  padding: 1.25rem 1.25rem 1.1rem;
+  margin-top: 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(139, 124, 246, 0.28);
+}
+.landing .chart-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--today));
+}
