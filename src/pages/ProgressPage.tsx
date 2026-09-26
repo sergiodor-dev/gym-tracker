@@ -10,11 +10,11 @@ import { TrendingUp, TrendingDown, Minus, ChevronDown, Check } from 'lucide-reac
 const SHORT_DATE = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' })
 
 export default function ProgressPage() {
-  const { data } = useAppData()
+  const { data, exerciseMap } = useAppData()
   const [exerciseId, setExerciseId] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
 
-  const selectedExercise = data.exercises.find((ex) => ex.id === exerciseId)
+  const selectedExercise = exerciseMap.get(exerciseId)
 
   // data.sessions ya viene recortado a las últimas PROGRESS_RETENTION_WEEKS
   // semanas (ver AppDataContext), así que todo lo que se muestra acá cae
@@ -116,7 +116,7 @@ export default function ProgressPage() {
         <summary>Ver todos los registros ({history.length})</summary>
         <ul className="list">
           {history.map((h, i) => {
-            const exercise = data.exercises.find((ex) => ex.id === h.exerciseId)
+            const exercise = exerciseMap.get(h.exerciseId)
             const maxWeight = Math.max(0, ...h.sets.map((s) => s.weight))
             return (
               <li key={i} className="list-item">

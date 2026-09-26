@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { RefreshCw, LogOut, UserX } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { RefreshCw, LogOut, UserX, ChevronRight } from 'lucide-react'
 import { useAuth } from '../AuthContext'
 import { useAppData } from '../AppDataContext'
 import { storageService } from '../services'
@@ -72,7 +73,14 @@ export default function AccountPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Cuenta" icon={THEME.account.icon} color={THEME.account} showBack={false}/>
+      <PageHeader title="Cuenta" icon={THEME.account.icon} color={THEME.account} showBack={false} />
+
+      <Link to="/backup" className="quick-link-hint">
+        <span>Exporta o importa tus datos en JSON</span>
+        <span className="quick-link-hint-action">
+          Ir a Backup <ChevronRight size={14} />
+        </span>
+      </Link>
 
       {!configured && (
         <div className="chart-card">

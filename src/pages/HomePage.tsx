@@ -13,7 +13,6 @@ const sections = [
   { to: '/progress', theme: THEME.progress, title: 'Progreso', subtitle: 'Consulta tu evolución' },
   { to: '/protein', theme: THEME.protein, title: 'Proteína', subtitle: 'Calculadora y registro diario' },
   { to: '/account', theme: THEME.account, title: 'Cuenta', subtitle: 'Sincroniza entre dispositivos' },
-  /*{ to: '/backup', theme: THEME.backup, title: 'Backup', subtitle: 'Exporta o importa datos' },*/
 ]
 
 export default function HomePage() {

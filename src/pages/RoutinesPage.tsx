@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppData } from '../AppDataContext'
 import { generateId } from '../utils/id'
+import { cascadeDeleteRoutine } from '../utils/cascade'
 import { MuscleGroup, Routine, RoutineExercise } from '../types'
 import PageHeader from '../components/PageHeader'
 import Modal from '../components/Modal'
@@ -12,7 +13,7 @@ import { THEME } from '../theme'
 import { ArrowRight, ChevronDown, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 
 export default function RoutinesPage() {
-  const { data, setData } = useAppData()
+  const { data, setData, exerciseMap } = useAppData()
   const [draft, setDraft] = useState<Routine | null>(null)
   const [isNew, setIsNew] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -127,7 +128,7 @@ export default function RoutinesPage() {
 
   function confirmDelete() {
     if (!deleteTarget) return
-    setData((prev) => ({ ...prev, routines: prev.routines.filter((r) => r.id !== deleteTarget.id) }))
+    setData((prev) => cascadeDeleteRoutine(prev, deleteTarget.id))
     if (expandedId === deleteTarget.id) setExpandedId(null)
     setDeleteTarget(null)
   }
@@ -189,7 +190,7 @@ export default function RoutinesPage() {
                   <div className="drawer-box">
                     {r.exercises.length === 0 && <p className="empty">Esta rutina aún no tiene ejercicios.</p>}
                     {r.exercises.map((re, i) => {
-                      const exercise = data.exercises.find((ex) => ex.id === re.exerciseId)
+                      const exercise = exerciseMap.get(re.exerciseId)
                       return (
                         <div key={i} className="exercise-summary-row">
                           <span>{exercise?.name ?? '(eliminado)'}</span>
@@ -232,7 +233,7 @@ export default function RoutinesPage() {
             </thead>
             <tbody>
               {draft.exercises.map((re, i) => {
-                const exercise = data.exercises.find((ex) => ex.id === re.exerciseId)
+                const exercise = exerciseMap.get(re.exerciseId)
                 return (
                   <tr key={i} data-exercise-row data-index={i} className={dragIndex === i ? 'dragging-row' : undefined}>
                     <td className="drag-handle-cell">

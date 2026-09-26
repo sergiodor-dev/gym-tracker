@@ -11,7 +11,7 @@ import { THEME } from '../theme'
 import { CheckCircle2, Plus, ChevronRight, RotateCcw } from 'lucide-react'
 
 export default function WorkoutPage() {
-  const { data, setData } = useAppData()
+  const { data, setData, exerciseMap } = useAppData()
   const weekday = todayWeekday()
   const todaysRoutineIds = data.weeklyPlan[weekday] ?? []
   const todaysRoutines = data.routines.filter((r) => todaysRoutineIds.includes(r.id))
@@ -124,7 +124,7 @@ export default function WorkoutPage() {
   if (activeRoutine) {
     const allDone = activeRoutine.exercises.length > 0 && activeRoutine.exercises.every((re) => completedIds.includes(re.exerciseId))
     const editingRe = editingExercise ? activeRoutine.exercises.find((re) => re.exerciseId === editingExercise.exerciseId) : null
-    const editingExerciseInfo = editingExercise ? data.exercises.find((ex) => ex.id === editingExercise.exerciseId) : null
+    const editingExerciseInfo = editingExercise ? exerciseMap.get(editingExercise.exerciseId) : null
 
     return (
       <div className="page">
@@ -145,7 +145,7 @@ export default function WorkoutPage() {
 
         <ul className="list">
           {activeRoutine.exercises.map((re) => {
-            const exercise = data.exercises.find((ex) => ex.id === re.exerciseId)
+            const exercise = exerciseMap.get(re.exerciseId)
             const completed = completedIds.includes(re.exerciseId)
             return (
               <li key={re.exerciseId} className="list-item selectable" onClick={() => openExerciseModal(re)}>

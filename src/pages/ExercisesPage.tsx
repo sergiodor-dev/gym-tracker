@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { useAppData } from '../AppDataContext'
 import { generateId } from '../utils/id'
+import { cascadeDeleteExercise } from '../utils/cascade'
 import { Exercise, MuscleGroup } from '../types'
 import PageHeader from '../components/PageHeader'
 import { THEME } from '../theme'
@@ -67,21 +68,7 @@ export default function ExercisesPage() {
 
   function confirmDelete() {
     if (!deleteTarget) return
-    const id = deleteTarget.id
-    setData((prev) => ({
-      ...prev,
-      exercises: prev.exercises.filter((ex) => ex.id !== id),
-      // Quita el ejercicio eliminado de las rutinas que lo incluyan...
-      routines: prev.routines.map((r) => ({
-        ...r,
-        exercises: r.exercises.filter((re) => re.exerciseId !== id),
-      })),
-      // ...y de los registros de progreso ya guardados.
-      sessions: prev.sessions.map((s) => ({
-        ...s,
-        exerciseLogs: s.exerciseLogs.filter((el) => el.exerciseId !== id),
-      })),
-    }))
+    setData((prev) => cascadeDeleteExercise(prev, deleteTarget.id))
     setDeleteTarget(null)
   }
 
