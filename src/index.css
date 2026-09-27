@@ -748,7 +748,7 @@ summary { cursor: pointer; color: var(--muted); font-weight: 600; }
 .landing-tagline {
   display: inline-block; margin-top: 0.3rem; color: var(--muted); font-weight: 600; font-size: var(--fs-sm);
 }
-.landing-features { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.landing-features { display: flex; align-items: center; min-height: 1.9rem; }
 .landing-feature {
   display: inline-flex; align-items: center; gap: 0.4rem;
   padding: 0.4rem 0.7rem; border-radius: 999px;
@@ -756,6 +756,11 @@ summary { cursor: pointer; color: var(--muted); font-weight: 600; }
   font-size: var(--fs-xs); font-weight: 700; color: var(--text);
 }
 .landing-feature svg { flex-shrink: 0; }
+.landing-feature-carousel { animation: feature-cycle 0.4s ease; }
+@keyframes feature-cycle {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .auth-tabs {
   display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem; padding: 0.25rem;
   background: var(--card-alt); border-radius: var(--radius-md); margin-bottom: 1.1rem;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAuth } from '../AuthContext'
 import { validateUsername } from '../services/supabase/auth'
 import { THEME } from '../theme'
@@ -11,6 +11,8 @@ const HIGHLIGHTS = [
   { ...THEME.progress, label: 'Progreso visual' },
   { ...THEME.protein, label: 'Proteína diaria' },
 ]
+
+const HIGHLIGHT_INTERVAL_MS = 2600
 
 function friendlyAuthError(message: string): string {
   const m = message.toLowerCase()
@@ -36,6 +38,14 @@ export default function WelcomePage() {
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [highlightIndex, setHighlightIndex] = useState(0)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setHighlightIndex((i) => (i + 1) % HIGHLIGHTS.length)
+    }, HIGHLIGHT_INTERVAL_MS)
+    return () => clearInterval(id)
+  }, [])
 
   function switchMode(next: Mode) {
     setMode(next)
@@ -81,12 +91,15 @@ export default function WelcomePage() {
             <span className="landing-tagline">Tu entrenamiento en un solo lugar</span>
           </div>
         </div>
-        <div className="landing-features">
-          {HIGHLIGHTS.map(({ icon: Icon, fg, label }) => (
-            <span key={label} className="landing-feature" style={{ color: fg }}>
-              <Icon size={14} strokeWidth={2.4} /> {label}
-            </span>
-          ))}
+        <div className="landing-features" aria-live="polite">
+          {(() => {
+            const { icon: Icon, fg, label } = HIGHLIGHTS[highlightIndex]
+            return (
+              <span key={label} className="landing-feature landing-feature-carousel" style={{ color: fg }}>
+                <Icon size={14} strokeWidth={2.4} /> {label}
+              </span>
+            )
+          })()}
         </div>
       </div>
 
