@@ -174,6 +174,7 @@ export default function WelcomePage() {
           </button>
         </form>
       </div>
+      <p className="app-version">v{__APP_VERSION__}</p>
     </div>
   )
 }

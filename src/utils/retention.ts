@@ -7,10 +7,13 @@ import { proteinDayKey } from './date'
 // donde cada sesión viajará por la API REST).
 export const PROGRESS_RETENTION_WEEKS = 6
 
-// Descarta las sesiones más antiguas que la ventana de retención, tomando
-// como referencia el momento actual. Se aplica tanto a datos cargados desde
-// el storage como a cada actualización (incluida la importación de un JSON),
-// de forma que el historial nunca supere las últimas N semanas.
+// Descarta las sesiones más antiguas que la ventana de retención, tomando como referencia el
+// momento actual. Es una ventana móvil de `weeks` semanas: cada sesión nueva entra y, a medida
+// que pasa el tiempo, la más antigua sale en cuanto supera el límite. Se aplica tanto a datos
+// cargados desde el storage como a cada actualización (incluida la importación de un JSON) y
+// una vez por minuto (ver AppDataContext), de forma que el historial nunca supere las últimas
+// N semanas. Con sesión iniciada, las sesiones descartadas también se borran de Supabase (el
+// diff de SupabaseService las detecta como filas eliminadas).
 export function pruneOldSessions(
   sessions: WorkoutSession[],
   weeks: number = PROGRESS_RETENTION_WEEKS,

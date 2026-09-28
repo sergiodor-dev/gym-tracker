@@ -18,11 +18,17 @@ export default function ProgressPage() {
 
   // data.sessions ya viene recortado a las últimas PROGRESS_RETENTION_WEEKS
   // semanas (ver AppDataContext), así que todo lo que se muestra acá cae
-  // dentro de esa ventana.
-  const history = data.sessions
-    .flatMap((s) => s.exerciseLogs.map((el) => ({ date: s.date, ...el })))
-    .filter((el) => !exerciseId || el.exerciseId === exerciseId)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  // dentro de esa ventana. Se memoiza por sesiones y ejercicio elegido: si se calculara en cada
+  // render, `history` sería un array nuevo cada vez y los useMemo de más abajo (que dependen de
+  // él) se recalcularían igualmente, sin ningún beneficio.
+  const history = useMemo(
+    () =>
+      data.sessions
+        .flatMap((s) => s.exerciseLogs.map((el) => ({ date: s.date, ...el })))
+        .filter((el) => !exerciseId || el.exerciseId === exerciseId)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [data.sessions, exerciseId],
+  )
 
   // Historial ascendente (más antiguo primero) del ejercicio seleccionado,
   // una entrada por sesión, para alimentar las gráficas de evolución.

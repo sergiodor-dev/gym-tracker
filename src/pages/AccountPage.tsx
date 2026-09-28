@@ -86,9 +86,7 @@ export default function AccountPage() {
         <div className="chart-card">
           <p style={{ marginTop: 0 }}><strong>La sincronización no está activada.</strong></p>
           <p className="muted" style={{ marginBottom: 0 }}>
-            Tus datos se guardan solo en este dispositivo y no hace falta iniciar sesión. Para sincronizarlos, crea
-            un proyecto en Supabase y rellena <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code> en{' '}
-            <code>src/config.ts</code> (pasos en el README).
+            Tus datos se guardan solo en este dispositivo y no hace falta iniciar sesión.
           </p>
         </div>
       )}

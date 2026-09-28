@@ -25,6 +25,15 @@ const AppDataContext = createContext<AppDataContextValue | undefined>(undefined)
 // a Supabase (ver PUSH_DELAY_MS); esto es aparte, para la escritura local.
 const SAVE_DEBOUNCE_MS = 400
 
+type Updater = (prev: AppData) => AppData
+
+// Recorta el historial a la ventana de retención (PROGRESS_RETENTION_WEEKS) y comprueba que el
+// contador de proteína siga correspondiendo al día actual. Se aplica a todo dato que entra al
+// estado: lo cargado del storage y cada actualización (incluida una importación de JSON).
+function normalizeData(d: AppData): AppData {
+  return { ...d, sessions: pruneOldSessions(d.sessions), protein: resyncProteinDay(d.protein) }
+}
+
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const { userId } = useAuth()
   const [data, setDataState] = useState<AppData>(emptyAppData)
@@ -32,30 +41,67 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const loadCounter = useRef(0)
   const saveTimer = useRef<number | undefined>(undefined)
   const pendingSave = useRef<AppData | null>(null)
+  // ¿Hay una carga en curso? Mientras la haya, `data` no se guarda (ver el efecto de guardado)
+  // y cada setData se anota además en `editQueue` para no perderlo (ver loadData).
+  const loadingRef = useRef(true)
+  const editQueue = useRef<Updater[]>([])
 
-  const reload = useCallback(async () => {
-    // Mientras `loading` es true no se guarda nada, para no escribir datos de un
-    // usuario/estado anterior sobre los recién cargados.
-    const id = ++loadCounter.current
-    setLoading(true)
-    const loaded = await storageService.load()
-    if (id !== loadCounter.current) return // ya hay una carga más reciente en marcha
-
-    // Por si el backup/storage trae sesiones más viejas que la ventana de retención
-    // (ej. tras importar un JSON antiguo), o el contador de proteína quedó de un
-    // "día de proteína" anterior (app cerrada desde antes de las 6 AM).
-    setDataState({
-      ...loaded,
-      sessions: pruneOldSessions(loaded.sessions),
-      protein: resyncProteinDay(loaded.protein),
-    })
-    setLoading(false)
+  // Escribe ya lo que esté esperando en el debounce de guardado, sin esperar a SAVE_DEBOUNCE_MS.
+  const flushPendingSave = useCallback((): Promise<void> => {
+    window.clearTimeout(saveTimer.current)
+    const toSave = pendingSave.current
+    pendingSave.current = null
+    if (!toSave) return Promise.resolve()
+    return storageService.save(toSave).catch((e) => console.error('No se pudo guardar', e))
   }, [])
+
+  // `sameAccount` distingue dos casos:
+  //   · true  (reintento tras un fallo de sync, "Sincronizar ahora"): mismo usuario. Antes de
+  //     cargar se guarda lo pendiente del debounce, para que `load` lo encuentre en el storage.
+  //   · false (carga inicial o cambio de sesión): lo pendiente pertenece a otro usuario/estado,
+  //     así que se descarta en vez de guardarlo o reaplicarlo sobre los datos nuevos.
+  const loadData = useCallback(
+    async (sameAccount: boolean) => {
+      const id = ++loadCounter.current
+      // Mientras `loading` es true no se guarda nada, para no escribir datos de un
+      // usuario/estado anterior sobre los recién cargados.
+      loadingRef.current = true
+      setLoading(true)
+
+      if (sameAccount) {
+        await flushPendingSave()
+      } else {
+        window.clearTimeout(saveTimer.current)
+        pendingSave.current = null
+        editQueue.current = []
+      }
+
+      const loaded = await storageService.load()
+      if (id !== loadCounter.current) return // ya hay una carga más reciente en marcha
+
+      // Cambios hechos por el usuario mientras cargaba (la carga con sesión espera a la red y
+      // puede tardar segundos): `loaded` no los incluye y reemplazar el estado los borraría, así
+      // que se reaplican sobre lo cargado. Los updaters son funciones de `prev`, por eso valen.
+      const edits = editQueue.current
+      editQueue.current = []
+      loadingRef.current = false
+
+      // normalizeData: por si el backup/storage trae sesiones más viejas que la ventana de
+      // retención (ej. tras importar un JSON antiguo), o el contador de proteína quedó de un
+      // "día de proteína" anterior (app cerrada desde antes de las 6 AM).
+      setDataState(normalizeData(edits.reduce((acc, update) => update(acc), loaded)))
+      setLoading(false)
+    },
+    [flushPendingSave],
+  )
+
+  // Vuelve a cargar los datos del mismo usuario (reintentos de sync, botón "Sincronizar ahora").
+  const reload = useCallback(() => loadData(true), [loadData])
 
   // Carga inicial y recarga al iniciar/cerrar sesión (cambia userId).
   useEffect(() => {
-    void reload()
-  }, [reload, userId])
+    void loadData(false)
+  }, [loadData, userId])
 
   // Si la última sincronización falló (sin conexión o error), reintenta al volver la
   // conexión o al volver a la pestaña/app (útil en el móvil).
@@ -75,14 +121,16 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [reload])
 
-  // Revisa cada minuto si el "día de proteína" ha cambiado (corte a las
-  // 6 AM), por si la app se queda abierta cruzando esa hora sin que haya
-  // otra actualización que dispare el reinicio.
+  // Revisa cada minuto si el "día de proteína" ha cambiado (corte a las 6 AM) y si alguna
+  // sesión ha salido de la ventana de retención, por si la app se queda abierta sin que haya
+  // otra actualización que dispare esas comprobaciones.
   useEffect(() => {
     const id = setInterval(() => {
       setDataState((prev) => {
+        const sessions = pruneOldSessions(prev.sessions)
         const protein = resyncProteinDay(prev.protein)
-        return protein === prev.protein ? prev : { ...prev, protein }
+        if (sessions.length === prev.sessions.length && protein === prev.protein) return prev
+        return { ...prev, sessions, protein }
       })
     }, 60_000)
     return () => clearInterval(id)
@@ -94,53 +142,48 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     if (loading) return
     pendingSave.current = data
     window.clearTimeout(saveTimer.current)
-    saveTimer.current = window.setTimeout(() => {
-      pendingSave.current = null
-      storageService.save(data).catch((e) => console.error('No se pudo guardar', e))
-    }, SAVE_DEBOUNCE_MS)
-  }, [data, loading])
+    saveTimer.current = window.setTimeout(() => void flushPendingSave(), SAVE_DEBOUNCE_MS)
+  }, [data, loading, flushPendingSave])
 
   // Si hay un guardado pendiente (debounce en curso) y la pestaña se oculta o se cierra, lo
   // fuerza ya en vez de esperar: localStorage.setItem es síncrono por debajo, así que la
   // escritura se completa aunque la promesa de storageService.save no llegue a resolverse.
   useEffect(() => {
-    function flushPending() {
-      if (!pendingSave.current) return
-      window.clearTimeout(saveTimer.current)
-      const toSave = pendingSave.current
-      pendingSave.current = null
-      storageService.save(toSave).catch(() => {})
-    }
     function onVisibilityChange() {
-      if (document.visibilityState === 'hidden') flushPending()
+      if (document.visibilityState === 'hidden') void flushPendingSave()
     }
-    window.addEventListener('beforeunload', flushPending)
+    const onBeforeUnload = () => void flushPendingSave()
+    window.addEventListener('beforeunload', onBeforeUnload)
     document.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
-      window.removeEventListener('beforeunload', flushPending)
+      window.removeEventListener('beforeunload', onBeforeUnload)
       document.removeEventListener('visibilitychange', onVisibilityChange)
-      flushPending()
+      void flushPendingSave()
     }
-  }, [])
+  }, [flushPendingSave])
 
   const exerciseMap = useMemo(() => new Map(data.exercises.map((ex) => [ex.id, ex])), [data.exercises])
 
-  function setData(updater: (prev: AppData) => AppData) {
-    setDataState((prev) => {
-      const next = updater(prev)
-      // Se recorta el historial en cada actualización (nuevas sesiones,
-      // ediciones o importaciones) para mantener siempre como máximo las
-      // últimas PROGRESS_RETENTION_WEEKS semanas de datos, y se comprueba
-      // que el contador de proteína siga correspondiendo al día actual.
-      return { ...next, sessions: pruneOldSessions(next.sessions), protein: resyncProteinDay(next.protein) }
-    })
-  }
+  // Con identidad estable (useCallback sin dependencias: solo usa refs y el setter de estado) para
+  // que quien la reciba pueda usarla en dependencias de efectos/memos sin re-ejecutarlos.
+  const setData = useCallback((updater: Updater) => {
+    // Con una carga en curso, el cambio se ve ya en pantalla pero además se anota para
+    // reaplicarlo sobre lo que devuelva la carga (ver loadData).
+    if (loadingRef.current) editQueue.current.push(updater)
+    // Se normaliza en cada actualización (nuevas sesiones, ediciones o importaciones) para
+    // mantener siempre como máximo las últimas PROGRESS_RETENTION_WEEKS semanas de datos.
+    setDataState((prev) => normalizeData(updater(prev)))
+  }, [])
 
-  return (
-    <AppDataContext.Provider value={{ data, setData, loading, reload, exerciseMap }}>
-      {children}
-    </AppDataContext.Provider>
+  // El valor del contexto solo cambia cuando cambia alguno de sus campos. Con un objeto literal
+  // nuevo en cada render, cualquier re-render del proveedor por otro motivo (p. ej. un cambio en
+  // AuthContext, como cerrar la splash) volvía a renderizar a todos los que usan useAppData.
+  const value = useMemo(
+    () => ({ data, setData, loading, reload, exerciseMap }),
+    [data, setData, loading, reload, exerciseMap],
   )
+
+  return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>
 }
 
 export function useAppData() {

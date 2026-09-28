@@ -52,7 +52,7 @@ export default function SplashScreen() {
       <h1 className="splash-wordmark">
         Gym<span className="landing-wordmark-accent">Tracker</span>
       </h1>
-      <p className="splash-greeting">{username ? `¡Bienvenido, ${username}!` : '¡Bienvenido!'}</p>
+      <p className="splash-greeting">{username ? `¡Bienvenido/a, ${username}!` : '¡Bienvenido!'}</p>
     </div>
   )
 }

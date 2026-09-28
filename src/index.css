@@ -235,6 +235,9 @@ input, select, button {
   font-size: var(--fs-md);
 }
 input[type="number"] { width: 72px; }
+/* Campos de series/reps/peso (texto con teclado numérico, ver components/NumericInput.tsx) */
+input.numeric-input { width: 72px; }
+input.numeric-input[aria-invalid="true"] { border-color: var(--danger); }
 button { cursor: pointer; background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); font-weight: 600; }
 button.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
 button:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -829,7 +832,7 @@ summary { cursor: pointer; color: var(--muted); font-weight: 600; }
   margin: 0;
   color: var(--muted);
   font-weight: 600;
-  font-size: 1.05rem;
+  font-size: 1.3rem;
   animation: splash-fade-up 0.5s ease-out 0.22s both;
 }
 @keyframes splash-fade-up {

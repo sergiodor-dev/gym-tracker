@@ -2,19 +2,67 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppData } from '../AppDataContext'
 import { generateId } from '../utils/id'
+import { isValidDecimal, isValidInteger, parseDecimal } from '../utils/numericInput'
 import { cascadeDeleteRoutine } from '../utils/cascade'
-import { MuscleGroup, Routine, RoutineExercise } from '../types'
+import { MuscleGroup, Routine } from '../types'
 import PageHeader from '../components/PageHeader'
 import Modal from '../components/Modal'
+import NumericInput from '../components/NumericInput'
 import ConfirmModal from '../components/ConfirmModal'
 import Fab from '../components/Fab'
 import MuscleGroupFilter from '../components/MuscleGroupFilter'
 import { THEME } from '../theme'
 import { ArrowRight, ChevronDown, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 
+// El formulario edita series, reps y peso como texto (ver utils/numericInput.ts): con Number('')
+// un campo vacío pasaba a 0 y no se podía borrar el valor para escribir otro. Solo al guardar
+// la rutina se convierten a número.
+interface DraftExercise {
+  exerciseId: string
+  sets: string
+  reps: string
+  weight: string
+}
+
+interface DraftRoutine {
+  id: string
+  name: string
+  exercises: DraftExercise[]
+}
+
+function toDraftRoutine(r: Routine): DraftRoutine {
+  return {
+    id: r.id,
+    name: r.name,
+    exercises: r.exercises.map((re) => ({
+      exerciseId: re.exerciseId,
+      sets: String(re.defaultSets),
+      reps: String(re.defaultReps),
+      weight: String(re.defaultWeight),
+    })),
+  }
+}
+
+function fromDraftRoutine(d: DraftRoutine): Routine {
+  return {
+    id: d.id,
+    name: d.name.trim(),
+    exercises: d.exercises.map((e) => ({
+      exerciseId: e.exerciseId,
+      defaultSets: Number(e.sets),
+      defaultReps: Number(e.reps),
+      defaultWeight: parseDecimal(e.weight),
+    })),
+  }
+}
+
+const isSetsValid = (e: DraftExercise) => isValidInteger(e.sets, 1)
+const isRepsValid = (e: DraftExercise) => isValidInteger(e.reps, 1)
+const isWeightValid = (e: DraftExercise) => isValidDecimal(e.weight)
+
 export default function RoutinesPage() {
   const { data, setData, exerciseMap } = useAppData()
-  const [draft, setDraft] = useState<Routine | null>(null)
+  const [draft, setDraft] = useState<DraftRoutine | null>(null)
   const [isNew, setIsNew] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -27,7 +75,7 @@ export default function RoutinesPage() {
   }
 
   function openEdit(routine: Routine) {
-    setDraft(structuredClone(routine))
+    setDraft(toDraftRoutine(routine))
     setIsNew(false)
   }
 
@@ -55,14 +103,14 @@ export default function RoutinesPage() {
   function addExercise(exerciseId: string) {
     setDraft((d) => {
       if (!d) return d
-      const entry: RoutineExercise = { exerciseId, defaultSets: 3, defaultReps: 10, defaultWeight: 0 }
+      const entry: DraftExercise = { exerciseId, sets: '3', reps: '10', weight: '0' }
       return { ...d, exercises: [...d.exercises, entry] }
     })
     setPickerOpen(false)
     setPickerFilter('')
   }
 
-  function updateExerciseField(index: number, field: keyof RoutineExercise, value: number) {
+  function updateExerciseField(index: number, field: 'sets' | 'reps' | 'weight', value: string) {
     setDraft((d) => {
       if (!d) return d
       const exercises = [...d.exercises]
@@ -112,8 +160,8 @@ export default function RoutinesPage() {
   }
 
   function saveDraft() {
-    if (!draft || !draft.name.trim()) return
-    const clean: Routine = { ...draft, name: draft.name.trim() }
+    if (!draft || !draft.name.trim() || !exercisesValid) return
+    const clean = fromDraftRoutine(draft)
     setData((prev) => {
       const exists = prev.routines.some((r) => r.id === clean.id)
       return {
@@ -132,6 +180,11 @@ export default function RoutinesPage() {
     if (expandedId === deleteTarget.id) setExpandedId(null)
     setDeleteTarget(null)
   }
+
+  // Todas las filas del formulario tienen series y reps (mín. 1) y peso; si no, no se puede guardar.
+  const exercisesValid = draft
+    ? draft.exercises.every((e) => isSetsValid(e) && isRepsValid(e) && isWeightValid(e))
+    : true
 
   const pickerExercises = pickerFilter
     ? data.exercises.filter((ex) => ex.muscleGroup === pickerFilter)
@@ -249,16 +302,31 @@ export default function RoutinesPage() {
                     </td>
                     <td>{exercise?.name ?? '(eliminado)'}</td>
                     <td>
-                      <input type="number" min={1} value={re.defaultSets}
-                        onChange={(e) => updateExerciseField(i, 'defaultSets', Number(e.target.value))} />
+                      <NumericInput
+                        kind="integer"
+                        value={re.sets}
+                        valid={isSetsValid(re)}
+                        label={`Series de ${exercise?.name ?? 'ejercicio'}`}
+                        onChange={(v) => updateExerciseField(i, 'sets', v)}
+                      />
                     </td>
                     <td>
-                      <input type="number" min={1} value={re.defaultReps}
-                        onChange={(e) => updateExerciseField(i, 'defaultReps', Number(e.target.value))} />
+                      <NumericInput
+                        kind="integer"
+                        value={re.reps}
+                        valid={isRepsValid(re)}
+                        label={`Repeticiones de ${exercise?.name ?? 'ejercicio'}`}
+                        onChange={(v) => updateExerciseField(i, 'reps', v)}
+                      />
                     </td>
                     <td>
-                      <input type="number" min={0} step={0.5} value={re.defaultWeight}
-                        onChange={(e) => updateExerciseField(i, 'defaultWeight', Number(e.target.value))} />
+                      <NumericInput
+                        kind="decimal"
+                        value={re.weight}
+                        valid={isWeightValid(re)}
+                        label={`Peso en kg de ${exercise?.name ?? 'ejercicio'}`}
+                        onChange={(v) => updateExerciseField(i, 'weight', v)}
+                      />
                     </td>
                     <td>
                       <button className="danger" onClick={() => removeExercise(i)}>✕</button>
@@ -276,8 +344,11 @@ export default function RoutinesPage() {
             </tbody>
           </table>
 
+          {!exercisesValid && (
+            <p className="form-error">Series y reps necesitan al menos 1, y el peso es obligatorio (0 si no usas carga).</p>
+          )}
           <div className="modal-actions">
-            <button onClick={saveDraft}>Guardar</button>
+            <button onClick={saveDraft} disabled={!exercisesValid}>Guardar</button>
           </div>
         </Modal>
       )}
