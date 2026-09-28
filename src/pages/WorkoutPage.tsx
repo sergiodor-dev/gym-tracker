@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAppData } from '../AppDataContext'
-import { todayWeekday, isToday, WEEKDAY_NAMES } from '../utils/date'
-import { isRoutineCompletedToday } from '../utils/sessions'
+import { todayWeekday, isToday, relativeDayLabel, WEEKDAY_NAMES } from '../utils/date'
+import { isRoutineCompletedToday, findLastExerciseLog, formatSetsSummary } from '../utils/sessions'
 import { generateId } from '../utils/id'
 import { isValidDecimal, isValidInteger, parseDecimal } from '../utils/numericInput'
 import { ExerciseLog, Routine, RoutineExercise, SetLog } from '../types'
@@ -10,7 +10,7 @@ import Modal from '../components/Modal'
 import ConfirmModal from '../components/ConfirmModal'
 import NumericInput from '../components/NumericInput'
 import { THEME } from '../theme'
-import { CheckCircle2, Plus, ChevronRight, RotateCcw, Trash2 } from 'lucide-react'
+import { CheckCircle2, Plus, ChevronRight, RotateCcw, Trash2, Undo2, History } from 'lucide-react'
 
 // Las series del modal se editan como texto (ver utils/numericInput.ts); solo al guardar el
 // ejercicio se convierten a SetLog.
@@ -23,6 +23,10 @@ function toDraftSet(s: SetLog): DraftSet {
   return { reps: String(s.reps), weight: String(s.weight) }
 }
 
+// Series iniciales según los valores por defecto de la rutina para ese ejercicio.
+const routineDefaultSets = (re: RoutineExercise): DraftSet[] =>
+  Array.from({ length: re.defaultSets }, () => toDraftSet({ reps: re.defaultReps, weight: re.defaultWeight }))
+
 const isRepsValid = (d: DraftSet) => isValidInteger(d.reps, 1)
 const isWeightValid = (d: DraftSet) => isValidDecimal(d.weight)
 
@@ -34,7 +38,14 @@ export default function WorkoutPage() {
   const otherRoutines = data.routines.filter((r) => !todaysRoutineIds.includes(r.id))
 
   const [activeRoutineId, setActiveRoutineId] = useState<string | null>(null)
-  const [editingExercise, setEditingExercise] = useState<{ exerciseId: string; sets: DraftSet[] } | null>(null)
+  // `prefilledFrom` indica de dónde salen las series iniciales del modal: la fecha (ISO) de la
+  // última sesión si se autorrellenó con ella, o null si vienen de lo ya registrado hoy o de los
+  // valores por defecto de la rutina.
+  const [editingExercise, setEditingExercise] = useState<{
+    exerciseId: string
+    sets: DraftSet[]
+    prefilledFrom: string | null
+  } | null>(null)
   const [confirmingReset, setConfirmingReset] = useState(false)
 
   const activeRoutine = data.routines.find((r) => r.id === activeRoutineId) ?? null
@@ -57,12 +68,38 @@ export default function WorkoutPage() {
     setActiveRoutineId(routine.id)
   }
 
+  // Última vez que se hizo el ejercicio, sin contar la sesión de hoy de esta rutina (la que se está
+  // rellenando ahora): así, incluso con el ejercicio ya completado hoy, sigue mostrando la sesión anterior.
+  const lastLogOf = (exerciseId: string) => findLastExerciseLog(exerciseId, data.sessions, todaySession?.id)
+
+  // Prioridad de las series iniciales: 1) lo ya registrado hoy (para editarlo), 2) la última sesión
+  // con ese ejercicio (autorrelleno, para no depender de la memoria), 3) los valores por defecto
+  // de la rutina cuando nunca se ha hecho.
   function openExerciseModal(re: RoutineExercise) {
     const existing = loggedSets.get(re.exerciseId)
-    const sets: DraftSet[] = existing && existing.length > 0
-      ? existing.map(toDraftSet)
-      : Array.from({ length: re.defaultSets }, () => toDraftSet({ reps: re.defaultReps, weight: re.defaultWeight }))
-    setEditingExercise({ exerciseId: re.exerciseId, sets })
+    if (existing && existing.length > 0) {
+      setEditingExercise({ exerciseId: re.exerciseId, sets: existing.map(toDraftSet), prefilledFrom: null })
+      return
+    }
+    const last = lastLogOf(re.exerciseId)
+    if (last) {
+      setEditingExercise({ exerciseId: re.exerciseId, sets: last.sets.map(toDraftSet), prefilledFrom: last.date })
+      return
+    }
+    setEditingExercise({ exerciseId: re.exerciseId, sets: routineDefaultSets(re), prefilledFrom: null })
+  }
+
+  // Cambia las series del modal a los valores por defecto de la rutina (p. ej. tras una descarga o
+  // si la última sesión fue un mal día). Descarta lo que se hubiera editado en el modal.
+  function applyRoutineDefaults(re: RoutineExercise) {
+    setEditingExercise((prev) => (prev ? { ...prev, sets: routineDefaultSets(re), prefilledFrom: null } : prev))
+  }
+
+  // Vuelve a rellenar con la última sesión (deshace applyRoutineDefaults).
+  function applyLastSession(exerciseId: string) {
+    const last = lastLogOf(exerciseId)
+    if (!last) return
+    setEditingExercise((prev) => (prev ? { ...prev, sets: last.sets.map(toDraftSet), prefilledFrom: last.date } : prev))
   }
 
   function updateDraftSet(index: number, field: keyof DraftSet, value: string) {
@@ -169,11 +206,18 @@ export default function WorkoutPage() {
           {activeRoutine.exercises.map((re) => {
             const exercise = exerciseMap.get(re.exerciseId)
             const completed = loggedSets.has(re.exerciseId)
+            const last = lastLogOf(re.exerciseId)
             return (
               <li key={re.exerciseId} className="list-item selectable" onClick={() => openExerciseModal(re)}>
                 <div>
                   <strong>{exercise?.name ?? '(eliminado)'}</strong>
-                  <div className="muted small">{re.defaultSets} × {re.defaultReps} @ {re.defaultWeight}kg</div>
+                  {last ? (
+                    <div className="muted small">
+                      Última vez: {formatSetsSummary(last.sets)} · {relativeDayLabel(last.date)}
+                    </div>
+                  ) : (
+                    <div className="muted small">{re.defaultSets} × {re.defaultReps} @ {re.defaultWeight}kg</div>
+                  )}
                 </div>
                 {completed ? (
                   <span className="status-badge success"><CheckCircle2 size={15} /> Completado</span>
@@ -187,6 +231,26 @@ export default function WorkoutPage() {
 
         {editingExercise && editingRe && (
           <Modal title={editingExerciseInfo?.name ?? 'Ejercicio'} onClose={() => setEditingExercise(null)}>
+            {editingExercise.prefilledFrom && (
+              <p className="muted small">
+                Rellenado con tu última sesión ({relativeDayLabel(editingExercise.prefilledFrom)}). Ajusta lo que haya cambiado.
+              </p>
+            )}
+            {/* Solo si el ejercicio aún no está registrado hoy: al editar algo ya guardado, estos
+                botones no tienen sentido y podrían pisar lo que se registró. */}
+            {!loggedSets.has(editingExercise.exerciseId) && (
+              editingExercise.prefilledFrom ? (
+                <button type="button" className="button-like modal-shortcut" onClick={() => applyRoutineDefaults(editingRe)}>
+                  <Undo2 size={16} /> Usar valores de la rutina ({editingRe.defaultSets} × {editingRe.defaultReps} @ {editingRe.defaultWeight} kg)
+                </button>
+              ) : (
+                lastLogOf(editingExercise.exerciseId) && (
+                  <button type="button" className="button-like modal-shortcut" onClick={() => applyLastSession(editingExercise.exerciseId)}>
+                    <History size={16} /> Usar última sesión
+                  </button>
+                )
+              )
+            )}
             <table className="table">
               <thead>
                 <tr><th>Serie</th><th>Reps</th><th>Peso (kg)</th><th></th></tr>

@@ -28,3 +28,15 @@ export function proteinDayKey(date: Date = new Date()): string {
   const d = String(shifted.getDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
 }
+
+// "hoy", "ayer", "hace 5 días", "hace 2 sem"... contando días de calendario (no horas), de modo
+// que un entreno de ayer por la noche sigue siendo "ayer" por la mañana.
+export function relativeDayLabel(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso)
+  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+  const days = Math.round((startOf(now) - startOf(d)) / (24 * 60 * 60 * 1000))
+  if (days <= 0) return 'hoy'
+  if (days === 1) return 'ayer'
+  if (days < 14) return `hace ${days} días`
+  return `hace ${Math.floor(days / 7)} sem`
+}

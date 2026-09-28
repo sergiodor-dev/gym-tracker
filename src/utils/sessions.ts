@@ -1,4 +1,4 @@
-import { Routine, WorkoutSession } from '../types'
+import { Routine, SetLog, WorkoutSession } from '../types'
 import { isToday } from './date'
 
 // Una rutina cuenta como "completada hoy" cuando existe una sesión de hoy para ella
@@ -15,4 +15,41 @@ export function isRoutineCompletedToday(
   if (!session) return false
   const loggedIds = new Set(session.exerciseLogs.map((el) => el.exerciseId))
   return routine.exercises.every((re) => loggedIds.has(re.exerciseId))
+}
+
+// Último registro de un ejercicio en el historial, sea de la rutina que sea (el peso pertenece al
+// ejercicio, no a la rutina). `excludeSessionId` permite ignorar la sesión que se está editando
+// ahora mismo, para que "la última vez" sea siempre una sesión anterior. El historial está
+// acotado por la ventana de retención (ver utils/retention.ts).
+export interface LastExerciseLog {
+  sets: SetLog[]
+  date: string // ISO de la sesión de la que sale
+}
+
+export function findLastExerciseLog(
+  exerciseId: string,
+  sessions: WorkoutSession[],
+  excludeSessionId?: string,
+): LastExerciseLog | null {
+  let best: LastExerciseLog | null = null
+  let bestTime = -Infinity
+  for (const session of sessions) {
+    if (session.id === excludeSessionId) continue
+    const time = new Date(session.date).getTime()
+    if (Number.isNaN(time) || time <= bestTime) continue
+    const log = session.exerciseLogs.find((l) => l.exerciseId === exerciseId && l.sets.length > 0)
+    if (!log) continue
+    best = { sets: log.sets, date: session.date }
+    bestTime = time
+  }
+  return best
+}
+
+// "3×10 @ 40 kg" si todas las series son iguales; si no, serie a serie: "10 @ 40 · 8 @ 42.5 kg".
+export function formatSetsSummary(sets: SetLog[]): string {
+  if (sets.length === 0) return ''
+  const first = sets[0]
+  const uniform = sets.every((s) => s.reps === first.reps && s.weight === first.weight)
+  if (uniform) return `${sets.length}×${first.reps} @ ${first.weight} kg`
+  return `${sets.map((s) => `${s.reps} @ ${s.weight}`).join(' · ')} kg`
 }
