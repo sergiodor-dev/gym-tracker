@@ -40,3 +40,24 @@ export function relativeDayLabel(iso: string, now: Date = new Date()): string {
   if (days < 14) return `hace ${days} días`
   return `hace ${Math.floor(days / 7)} sem`
 }
+
+// ---- Días y semanas en hora local (usados por utils/stats.ts) ----
+
+// Clave YYYY-MM-DD del día de calendario local de una fecha.
+export function localDayKey(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
+// Medianoche local de `d` desplazada `n` días (n puede ser negativo). Se construye con el
+// constructor de fecha, no sumando milisegundos, para no romperse en los cambios de hora.
+export function addDays(d: Date, n: number): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
+}
+
+// Lunes (medianoche local) de la semana de `d`. La semana va de lunes a domingo.
+export function startOfWeek(d: Date): Date {
+  return addDays(d, -((d.getDay() + 6) % 7))
+}
+

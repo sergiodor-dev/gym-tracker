@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useAppData } from '../AppDataContext'
 import { todayWeekday, isToday, relativeDayLabel, WEEKDAY_NAMES } from '../utils/date'
 import { isRoutineCompletedToday, findLastExerciseLog, formatSetsSummary } from '../utils/sessions'
+import { detectRecords, groupRecordsByLog, recordKey } from '../utils/stats'
 import { generateId } from '../utils/id'
 import { isValidDecimal, isValidInteger, parseDecimal } from '../utils/numericInput'
 import { ExerciseLog, Routine, RoutineExercise, SetLog } from '../types'
@@ -10,7 +11,7 @@ import Modal from '../components/Modal'
 import ConfirmModal from '../components/ConfirmModal'
 import NumericInput from '../components/NumericInput'
 import { THEME } from '../theme'
-import { CheckCircle2, Plus, ChevronRight, RotateCcw, Trash2, Undo2, History } from 'lucide-react'
+import { CheckCircle2, Plus, ChevronRight, RotateCcw, Trash2, Undo2, History, Trophy } from 'lucide-react'
 
 // Las series del modal se editan como texto (ver utils/numericInput.ts); solo al guardar el
 // ejercicio se convierten a SetLog.
@@ -36,6 +37,10 @@ export default function WorkoutPage() {
   const todaysRoutineIds = data.weeklyPlan[weekday] ?? []
   const todaysRoutines = data.routines.filter((r) => todaysRoutineIds.includes(r.id))
   const otherRoutines = data.routines.filter((r) => !todaysRoutineIds.includes(r.id))
+
+  // Récords derivados del historial (ver utils/stats.ts), para marcar los ejercicios de hoy que
+  // superan tu mejor marca anterior. Va antes del return condicional de más abajo (reglas de hooks).
+  const recordsByLog = useMemo(() => groupRecordsByLog(detectRecords(data.sessions)), [data.sessions])
 
   const [activeRoutineId, setActiveRoutineId] = useState<string | null>(null)
   // `prefilledFrom` indica de dónde salen las series iniciales del modal: la fecha (ISO) de la
@@ -207,6 +212,7 @@ export default function WorkoutPage() {
             const exercise = exerciseMap.get(re.exerciseId)
             const completed = loggedSets.has(re.exerciseId)
             const last = lastLogOf(re.exerciseId)
+            const isRecord = todaySession ? recordsByLog.has(recordKey(todaySession.id, re.exerciseId)) : false
             return (
               <li key={re.exerciseId} className="list-item selectable" onClick={() => openExerciseModal(re)}>
                 <div>
@@ -220,7 +226,10 @@ export default function WorkoutPage() {
                   )}
                 </div>
                 {completed ? (
-                  <span className="status-badge success"><CheckCircle2 size={15} /> Completado</span>
+                  <div className="badge-row">
+                    {isRecord && <span className="status-badge record"><Trophy size={15} /> Récord</span>}
+                    <span className="status-badge success"><CheckCircle2 size={15} /> Completado</span>
+                  </div>
                 ) : (
                   <span className="status-badge pending">Pendiente</span>
                 )}

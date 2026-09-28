@@ -16,7 +16,7 @@ interface LineChartProps {
 export default function LineChart({ title, unit, points, color = '#DB2777' }: LineChartProps) {
   const width = 320
   const height = 140
-  const padding = { top: 14, right: 12, bottom: 24, left: 32 }
+  const padding = { top: 14, right: 12, bottom: 24, left: 40 }
   const innerW = width - padding.left - padding.right
   const innerH = height - padding.top - padding.bottom
 

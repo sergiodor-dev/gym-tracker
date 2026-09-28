@@ -1,9 +1,11 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight, CheckCircle2 } from 'lucide-react'
+import { ChevronRight, CheckCircle2, Flame } from 'lucide-react'
 import { useAppData } from '../AppDataContext'
 import { useAuth } from '../AuthContext'
 import { todayWeekday } from '../utils/date'
 import { isRoutineCompletedToday } from '../utils/sessions'
+import { plannedStreak, weeklyAdherence } from '../utils/stats'
 import { THEME } from '../theme'
 
 const sections = [
@@ -26,6 +28,17 @@ export default function HomePage() {
     isRoutineCompletedToday(r, data.sessions)
   )
 
+  // Se recalcula solo cuando cambian el plan, las rutinas o las sesiones.
+  const adherence = useMemo(
+    () => weeklyAdherence(data.weeklyPlan, data.routines, data.sessions),
+    [data.weeklyPlan, data.routines, data.sessions],
+  )
+  const streak = useMemo(
+    () => plannedStreak(data.weeklyPlan, data.routines, data.sessions),
+    [data.weeklyPlan, data.routines, data.sessions],
+  )
+  const weekPercent = adherence.planned > 0 ? Math.round((adherence.done / adherence.planned) * 100) : 0
+
   return (
     <div className="page home">
       <div className="welcome">
@@ -46,6 +59,32 @@ export default function HomePage() {
         {allCompletedToday && <CheckCircle2 size={22} className="train-widget-check" />}
         <ChevronRight size={22} className="train-widget-chevron" />
       </Link>
+
+      {adherence.planned > 0 && (
+        <div className="week-card">
+          <div className="week-card-head">
+            <span className="week-card-title">Esta semana</span>
+            <span className="week-card-count">
+              {adherence.done} de {adherence.planned} {adherence.planned === 1 ? 'entreno' : 'entrenos'}
+            </span>
+          </div>
+          <div
+            className="week-bar"
+            role="progressbar"
+            aria-label="Entrenos cumplidos esta semana"
+            aria-valuemin={0}
+            aria-valuemax={adherence.planned}
+            aria-valuenow={adherence.done}
+          >
+            <div className="week-bar-fill" style={{ width: `${weekPercent}%` }} />
+          </div>
+          {streak.count > 0 && (
+            <div className="streak-chip">
+              <Flame size={16} /> Racha: {streak.count}{streak.capped ? '+' : ''} {streak.count === 1 ? 'entreno' : 'entrenos'} seguidos
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="card-grid">
         {sections.map((s) => (
