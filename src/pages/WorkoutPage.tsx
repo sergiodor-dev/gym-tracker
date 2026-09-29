@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useAppData } from '../AppDataContext'
-import { todayWeekday, isToday, relativeDayLabel, WEEKDAY_NAMES } from '../utils/date'
-import { isRoutineCompletedToday, findLastExerciseLog, formatSetsSummary } from '../utils/sessions'
+import { isSameDay, sessionDateForDay, addDays, startOfWeek, localDayKey, relativeDayLabel, WEEKDAY_NAMES, WEEKDAY_SHORT } from '../utils/date'
+import { isRoutineCompletedOn, findLastExerciseLog, formatSetsSummary } from '../utils/sessions'
 import { detectRecords, groupRecordsByLog, recordKey } from '../utils/stats'
 import { generateId } from '../utils/id'
 import { isValidDecimal, isValidInteger, parseDecimal } from '../utils/numericInput'
@@ -33,7 +33,19 @@ const isWeightValid = (d: DraftSet) => isValidDecimal(d.weight)
 
 export default function WorkoutPage() {
   const { data, setData, exerciseMap } = useAppData()
-  const weekday = todayWeekday()
+
+  // Día sobre el que se registra: por defecto hoy, pero se puede elegir cualquier día anterior de la
+  // semana en curso (lunes a domingo) para apuntar un entreno que se olvidó o no se pudo registrar.
+  // `null` significa "hoy" y sigue a hoy si la página queda abierta pasada la medianoche.
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null)
+  const now = new Date()
+  const todayStart = addDays(now, 0)
+  const todayKey = localDayKey(todayStart)
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(now), i))
+  const targetDay =
+    weekDays.find((d) => localDayKey(d) === selectedDayKey && d.getTime() <= todayStart.getTime()) ?? todayStart
+  const isViewingToday = localDayKey(targetDay) === todayKey
+  const weekday = targetDay.getDay()
   const todaysRoutineIds = data.weeklyPlan[weekday] ?? []
   const todaysRoutines = data.routines.filter((r) => todaysRoutineIds.includes(r.id))
   const otherRoutines = data.routines.filter((r) => !todaysRoutineIds.includes(r.id))
@@ -41,6 +53,16 @@ export default function WorkoutPage() {
   // Récords derivados del historial (ver utils/stats.ts), para marcar los ejercicios de hoy que
   // superan tu mejor marca anterior. Va antes del return condicional de más abajo (reglas de hooks).
   const recordsByLog = useMemo(() => groupRecordsByLog(detectRecords(data.sessions)), [data.sessions])
+
+  // Días (YYYY-MM-DD) con algún ejercicio registrado, para marcar el selector de día.
+  const trainedDayKeys = useMemo(() => {
+    const keys = new Set<string>()
+    for (const s of data.sessions) {
+      const t = new Date(s.date)
+      if (!Number.isNaN(t.getTime()) && s.exerciseLogs.length > 0) keys.add(localDayKey(t))
+    }
+    return keys
+  }, [data.sessions])
 
   const [activeRoutineId, setActiveRoutineId] = useState<string | null>(null)
   // `prefilledFrom` indica de dónde salen las series iniciales del modal: la fecha (ISO) de la
@@ -55,11 +77,11 @@ export default function WorkoutPage() {
 
   const activeRoutine = data.routines.find((r) => r.id === activeRoutineId) ?? null
 
-  // Única fuente de verdad del progreso de hoy: la sesión guardada en data.sessions. Lo registrado
+  // Única fuente de verdad del progreso del día elegido: la sesión guardada en data.sessions. Lo registrado
   // y lo completado se derivan de ella (antes se duplicaba en estado local y había que mantener
   // ambos sincronizados), de modo que cambiar de sección o recargar no puede desincronizarlos.
   const todaySession = activeRoutine
-    ? data.sessions.find((s) => s.routineId === activeRoutine.id && isToday(s.date))
+    ? data.sessions.find((s) => s.routineId === activeRoutine.id && isSameDay(s.date, targetDay))
     : undefined
   const loggedSets = new Map<string, SetLog[]>(
     (todaySession?.exerciseLogs ?? []).map((el): [string, SetLog[]] => [el.exerciseId, el.sets]),
@@ -73,9 +95,11 @@ export default function WorkoutPage() {
     setActiveRoutineId(routine.id)
   }
 
-  // Última vez que se hizo el ejercicio, sin contar la sesión de hoy de esta rutina (la que se está
-  // rellenando ahora): así, incluso con el ejercicio ya completado hoy, sigue mostrando la sesión anterior.
-  const lastLogOf = (exerciseId: string) => findLastExerciseLog(exerciseId, data.sessions, todaySession?.id)
+  // Última vez que se hizo el ejercicio, sin contar la sesión de esta rutina que se está rellenando
+  // ahora y sin sesiones posteriores al día elegido (si se registra un día pasado, "la última vez" es
+  // la anterior a ese día): así, incluso con el ejercicio ya completado, sigue mostrando la sesión anterior.
+  const lastLogOf = (exerciseId: string) =>
+    findLastExerciseLog(exerciseId, data.sessions, todaySession?.id, addDays(targetDay, 1))
 
   // Prioridad de las series iniciales: 1) lo ya registrado hoy (para editarlo), 2) la última sesión
   // con ese ejercicio (autorrelleno, para no depender de la memoria), 3) los valores por defecto
@@ -143,7 +167,7 @@ export default function WorkoutPage() {
         : [...logs, { exerciseId, sets }]
 
     setData((prev) => {
-      const existingSession = prev.sessions.find((s) => s.routineId === routineId && isToday(s.date))
+      const existingSession = prev.sessions.find((s) => s.routineId === routineId && isSameDay(s.date, targetDay))
       if (existingSession) {
         return {
           ...prev,
@@ -156,19 +180,19 @@ export default function WorkoutPage() {
         ...prev,
         sessions: [
           ...prev.sessions,
-          { id: generateId(), routineId, date: new Date().toISOString(), exerciseLogs: [{ exerciseId, sets }] },
+          { id: generateId(), routineId, date: sessionDateForDay(targetDay), exerciseLogs: [{ exerciseId, sets }] },
         ],
       }
     })
   }
 
-  // Borra el progreso de hoy para la rutina activa: elimina la sesión de hoy (si existe) para que
+  // Borra el progreso del día elegido para la rutina activa: elimina esa sesión (si existe) para que
   // no quede como completada ni conserve series antiguas. Útil para volver a entrenarla desde cero.
   function resetRoutine() {
     if (!activeRoutine) return
     setData((prev) => ({
       ...prev,
-      sessions: prev.sessions.filter((s) => !(s.routineId === activeRoutine.id && isToday(s.date))),
+      sessions: prev.sessions.filter((s) => !(s.routineId === activeRoutine.id && isSameDay(s.date, targetDay))),
     }))
     setConfirmingReset(false)
   }
@@ -181,9 +205,10 @@ export default function WorkoutPage() {
   }
 
   if (activeRoutine) {
-    const allDone = isRoutineCompletedToday(activeRoutine, data.sessions)
+    const allDone = isRoutineCompletedOn(activeRoutine, data.sessions, targetDay)
     // Solo cuentan los ejercicios que la rutina tiene ahora (un registro de un ejercicio que ya
     // no está en la rutina no debe inflar el contador).
+    const dayLabel = isViewingToday ? WEEKDAY_NAMES[weekday] : `${WEEKDAY_NAMES[weekday]} ${targetDay.getDate()}`
     const completedCount = activeRoutine.exercises.filter((re) => loggedSets.has(re.exerciseId)).length
     const editingRe = editingExercise ? activeRoutine.exercises.find((re) => re.exerciseId === editingExercise.exerciseId) : null
     const editingExerciseInfo = editingExercise ? exerciseMap.get(editingExercise.exerciseId) : null
@@ -192,7 +217,12 @@ export default function WorkoutPage() {
       <div className="page">
         <PageHeader title={activeRoutine.name} icon={THEME.train.icon} color={THEME.train} onBack={() => setActiveRoutineId(null)} />
         <div className="routine-status">
-          <p className="muted">{WEEKDAY_NAMES[weekday]} — {completedCount}/{activeRoutine.exercises.length} ejercicios completados</p>
+          <p className="muted">
+            {dayLabel} — {completedCount}/{activeRoutine.exercises.length} ejercicios completados
+          </p>
+          {!isViewingToday && (
+            <p className="muted small past-day-note">Estás registrando un entreno de un día anterior.</p>
+          )}
 
           {loggedSets.size > 0 && (
             <button type="button" className="button-like" onClick={() => setConfirmingReset(true)}>
@@ -325,8 +355,8 @@ export default function WorkoutPage() {
               <>
                 <p>¿Reiniciar "{activeRoutine.name}"?</p>
                 <p className="muted small">
-                  Se borrará el progreso registrado hoy para esta rutina (series, reps y pesos de todos sus
-                  ejercicios).
+                  Se borrará el progreso registrado {isViewingToday ? 'hoy' : `el ${dayLabel.toLowerCase()}`} para
+                  esta rutina (series, reps y pesos de todos sus ejercicios).
                 </p>
               </>
             }
@@ -341,16 +371,52 @@ export default function WorkoutPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Entrenar hoy" icon={THEME.train.icon} color={THEME.train} />
-      <p className="muted">Hoy es {WEEKDAY_NAMES[weekday]}</p>
+      <PageHeader
+        title={isViewingToday ? 'Entrenar hoy' : 'Registrar entreno'}
+        icon={THEME.train.icon}
+        color={THEME.train}
+      />
+
+      <div className="day-picker" role="group" aria-label="Día de la semana">
+        {weekDays.map((d) => {
+          const key = localDayKey(d)
+          const future = d.getTime() > todayStart.getTime()
+          const selected = key === localDayKey(targetDay)
+          return (
+            <button
+              key={key}
+              type="button"
+              className={`day-pill${selected ? ' active' : ''}${key === todayKey ? ' today' : ''}`}
+              disabled={future}
+              aria-pressed={selected}
+              aria-label={`${WEEKDAY_NAMES[d.getDay()]} ${d.getDate()}${trainedDayKeys.has(key) ? ', con entreno registrado' : ''}`}
+              onClick={() => setSelectedDayKey(key === todayKey ? null : key)}
+            >
+              <span className="day-pill-name">{WEEKDAY_SHORT[d.getDay()]}</span>
+              <span className="day-pill-num">{d.getDate()}</span>
+              <span className={`day-pill-dot${trainedDayKeys.has(key) ? ' on' : ''}`} aria-hidden="true" />
+            </button>
+          )
+        })}
+      </div>
+
+      <p className="muted">
+        {isViewingToday
+          ? `Hoy es ${WEEKDAY_NAMES[weekday]}`
+          : `Registrando el ${WEEKDAY_NAMES[weekday].toLowerCase()} ${targetDay.getDate()}`}
+      </p>
 
       {todaysRoutines.length === 0 && (
-        <p className="empty">No hay rutina planificada para hoy. Ve a "Planificación" para asignarla.</p>
+        <p className="empty">
+          {isViewingToday
+            ? 'No hay rutina planificada para hoy. Ve a "Planificación" para asignarla.'
+            : `No había rutina planificada para el ${WEEKDAY_NAMES[weekday].toLowerCase()}. Puedes registrar otra abajo.`}
+        </p>
       )}
 
       <ul className="list">
         {todaysRoutines.map((r) => {
-          const completed = isRoutineCompletedToday(r, data.sessions)
+          const completed = isRoutineCompletedOn(r, data.sessions, targetDay)
           return (
             <li key={r.id} className="list-item selectable" onClick={() => startRoutine(r)}>
               <div>
@@ -368,7 +434,7 @@ export default function WorkoutPage() {
       </ul>
 
       <details>
-        <summary>Iniciar otra rutina (no planificada hoy)</summary>
+        <summary>{isViewingToday ? 'Iniciar otra rutina (no planificada hoy)' : 'Registrar otra rutina (no planificada ese día)'}</summary>
         <ul className="list">
           {otherRoutines.map((r) => (
             <li key={r.id} className="list-item selectable" onClick={() => startRoutine(r)}>

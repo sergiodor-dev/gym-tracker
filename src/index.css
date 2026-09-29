@@ -869,3 +869,106 @@ summary { cursor: pointer; color: var(--muted); font-weight: 600; }
   font-size: var(--fs-sm); font-weight: 700; color: #F97316;
   background: rgba(249, 115, 22, 0.14); padding: 0.25rem 0.6rem; border-radius: 999px;
 }
+
+/* ---- Selector de día (registro retroactivo en Entrenar) ---- */
+.day-picker { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.35rem; margin: 0.7rem 0 0.9rem; }
+.day-pill {
+  display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
+  padding: 0.45rem 0; border-radius: var(--radius-sm);
+  background: var(--card-alt); border: 1px solid var(--border); color: var(--muted);
+  font-weight: 600; cursor: pointer;
+}
+.day-pill:disabled { opacity: 0.35; cursor: not-allowed; }
+.day-pill.today:not(.active) { border-color: var(--today); }
+.day-pill.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.day-pill-name { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.02em; }
+.day-pill-num { font-size: var(--fs-md); color: var(--text); }
+.day-pill.active .day-pill-num { color: var(--accent); }
+.day-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: transparent; }
+.day-pill-dot.on { background: var(--success); }
+.past-day-note { margin: 0; }
+
+/* ---- Calendario de semanas anteriores (Planificación) ---- */
+button.quick-link-hint { width: 100%; font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; }
+.quick-link-hint-main { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--accent); font-weight: 600; }
+
+/* Móvil: el botón abre el calendario en un modal; en PC el calendario va siempre visible debajo de la línea semanal. */
+.prev-weeks-inline { display: none; }
+@media (min-width: 768px) {
+  .prev-weeks-button { display: none; }
+  .prev-weeks-inline { display: block; }
+}
+
+.prev-weeks { display: flex; flex-direction: column; gap: 0.9rem; }
+.prev-weeks-inline { margin-top: 1.4rem; }
+.prev-weeks-title { margin: 0 0 0.6rem; font-size: 1rem; font-weight: 700; }
+.cal-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 0.9rem; font-size: var(--fs-xs); color: var(--muted); margin: 0; }
+.cal-legend span { display: inline-flex; align-items: center; gap: 0.3rem; }
+
+.cal-week-title { font-size: var(--fs-sm); font-weight: 700; color: var(--muted); margin: 0 0 0.4rem; }
+.cal-week-grid { display: flex; flex-direction: column; gap: 0.3rem; }
+.cal-day {
+  display: flex; align-items: flex-start; gap: 0.6rem;
+  background: var(--card-alt); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0.45rem 0.6rem;
+}
+.cal-day.nodata { opacity: 0.55; }
+.cal-day-head { flex: 0 0 3.6rem; font-size: var(--fs-sm); font-weight: 700; padding-top: 0.15rem; }
+.cal-day-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+.cal-rest { font-size: var(--fs-sm); color: var(--muted); padding-top: 0.15rem; }
+
+.cal-pill {
+  display: flex; align-items: center; gap: 0.35rem; min-width: 0;
+  font-size: var(--fs-sm); font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 999px;
+  background: var(--card); border: 1px solid var(--border); color: var(--muted);
+}
+.cal-pill-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-pill svg { flex-shrink: 0; }
+.cal-pill.done { background: var(--success-soft); border-color: transparent; color: var(--success); }
+.cal-pill.partial { background: rgba(245, 158, 11, 0.16); border-color: transparent; color: #F59E0B; }
+.cal-pill.missed { background: rgba(255, 107, 107, 0.14); border-color: transparent; color: var(--danger); }
+.cal-legend .done { color: var(--success); }
+.cal-legend .partial { color: #F59E0B; }
+.cal-legend .missed { color: var(--danger); }
+
+@media (min-width: 768px) {
+  .cal-week-grid { flex-direction: row; gap: 0.75rem; }
+  .cal-day { flex: 1; min-width: 0; flex-direction: column; gap: 0.35rem; min-height: 84px; padding: 0.6rem 0.65rem; }
+  .cal-day-head { flex: none; padding-top: 0; }
+  .cal-day-body { width: 100%; }
+  .cal-rest { padding-top: 0; }
+}
+
+/* ---- Carga bajo demanda del calendario: esqueleto, botón flotante y aviso ---- */
+.prev-weeks-stage { position: relative; }
+.prev-weeks-stage .prev-weeks { opacity: 0.6; }
+.prev-weeks-overlay {
+  position: absolute; inset: 0; display: flex; justify-content: center; align-items: flex-start;
+  padding-top: 3rem; pointer-events: none;
+}
+.prev-weeks-overlay > * { pointer-events: auto; }
+.prev-weeks-load { padding: 0.7rem 1.2rem; border-radius: 999px; box-shadow: var(--shadow-lg); }
+.prev-weeks-loading {
+  display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.1rem; border-radius: 999px;
+  background: var(--card); border: 1px solid var(--border); font-weight: 600; font-size: var(--fs-md);
+  box-shadow: var(--shadow-lg);
+}
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.sk {
+  display: block; border-radius: 8px;
+  background: linear-gradient(90deg, var(--card-alt) 25%, var(--border) 50%, var(--card-alt) 75%);
+  background-size: 200% 100%; animation: sk-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes sk-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.sk-title { width: 7rem; height: 0.8rem; margin: 0 0 0.5rem; }
+.sk-head { width: 2.6rem; height: 0.8rem; margin-top: 0.2rem; }
+.sk-pill { width: 100%; height: 1.5rem; border-radius: 999px; }
+.sk-rest { width: 3.5rem; height: 0.7rem; margin-top: 0.2rem; opacity: 0.6; }
+
+.prev-weeks-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
+  font-size: var(--fs-sm); color: var(--muted); background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35); border-radius: var(--radius-sm); padding: 0.55rem 0.8rem; margin-bottom: 0.9rem;
+}

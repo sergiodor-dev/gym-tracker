@@ -4,7 +4,7 @@
 // solo se convierte a número al guardar.
 
 export const INTEGER_PATTERN = /^\d{0,3}$/ // hasta 3 cifras, sin decimales
-export const DECIMAL_PATTERN = /^\d{0,4}([.,]\d{0,2})?$/ // hasta 4 cifras y 2 decimales, con punto o coma
+export const DECIMAL_PATTERN = /^\d{0,4}([.,]\d{0,3})?$/ // hasta 4 cifras y 3 decimales, con punto o coma
 
 export function parseDecimal(value: string): number {
   return Number(value.replace(',', '.'))
