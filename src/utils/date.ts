@@ -84,4 +84,3 @@ export function addDays(d: Date, n: number): Date {
 export function startOfWeek(d: Date): Date {
   return addDays(d, -((d.getDay() + 6) % 7))
 }
-

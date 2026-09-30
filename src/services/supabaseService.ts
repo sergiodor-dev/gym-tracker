@@ -5,6 +5,7 @@ import {
   ProteinEntry,
   RoutineExercise,
   WeeklyPlan,
+  WorkoutSession,
   emptyProteinTracker,
 } from '../types'
 import { StorageService } from './storageService'
@@ -128,6 +129,16 @@ interface ProteinRow { target_grams: number; day_key: string; entries: ProteinEn
 
 const DELETE_CHUNK = 100
 
+// Postgres devuelve timestamptz como "…+00:00": se normaliza al formato ISO de la app.
+function toSession(r: SessionRow): WorkoutSession {
+  return {
+    id: r.id,
+    routineId: r.routine_id,
+    date: new Date(r.date).toISOString(),
+    exerciseLogs: r.exercise_logs,
+  }
+}
+
 export class SupabaseService implements StorageService {
   private snapshot: Snapshot | null = null
   private snapshotUid: string | null = null
@@ -156,13 +167,7 @@ export class SupabaseService implements StorageService {
       exercises: exercises.map((r) => ({ id: r.id, name: r.name, muscleGroup: r.muscle_group as MuscleGroup | '' })),
       routines: routines.map((r) => ({ id: r.id, name: r.name, exercises: r.exercises })),
       weeklyPlan: Object.fromEntries(weeklyPlan.map((r) => [r.weekday, r.routine_ids])) as WeeklyPlan,
-      // Postgres devuelve timestamptz como "…+00:00": se normaliza al formato ISO de la app.
-      sessions: sessions.map((r) => ({
-        id: r.id,
-        routineId: r.routine_id,
-        date: new Date(r.date).toISOString(),
-        exerciseLogs: r.exercise_logs,
-      })),
+      sessions: sessions.map(toSession),
       protein: protein[0]
         ? { targetGrams: Number(protein[0].target_grams), dayKey: protein[0].day_key, entries: protein[0].entries }
         : structuredClone(emptyProteinTracker),
@@ -170,6 +175,16 @@ export class SupabaseService implements StorageService {
 
     this.setSnapshot(data, uid)
     return data
+  }
+
+  // Sesiones con fecha en [from, to) leídas directamente de la nube (una sola petición GET con
+  // filtro por rango). No toca el snapshot ni el estado de la app: es una lectura independiente,
+  // pensada para vistas que se cargan bajo demanda (calendario de semanas anteriores).
+  async loadSessionsBetween(from: Date, to: Date): Promise<WorkoutSession[]> {
+    this.uid() // falla pronto si no hay sesión
+    const range = `date=gte.${encodeURIComponent(from.toISOString())}&date=lt.${encodeURIComponent(to.toISOString())}`
+    const rows = await rest<SessionRow[]>(`sessions?select=id,routine_id,date,exercise_logs&${range}&order=date.asc`)
+    return rows.map(toSession)
   }
 
   // ¿Hay algo que subir? (comparación local, sin red)

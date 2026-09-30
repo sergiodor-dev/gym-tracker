@@ -1,10 +1,11 @@
-import { AppData, emptyAppData } from '../types'
+import { AppData, WorkoutSession, emptyAppData } from '../types'
 import { isSupabaseConfigured } from '../config'
 import { StorageService } from './storageService'
 import { LocalStorageService } from './localStorageService'
 import { SupabaseService } from './supabaseService'
 import { getSession } from './supabase/auth'
 import { setSyncInfo } from './syncStatus'
+import { previousWeeksRange } from '../utils/calendar'
 
 // Modelo mental:
 //   · Sin sesión  → solo localStorage (idéntico a la Fase 1).
@@ -35,6 +36,12 @@ function describeError(e: unknown): { offline: boolean; message: string } {
   return { offline, message: e instanceof Error ? e.message : String(e) }
 }
 
+export interface PreviousWeeksSessions {
+  sessions: WorkoutSession[]
+  // true = no se pudo consultar la nube y se devuelven los datos guardados en este dispositivo
+  fromDevice: boolean
+}
+
 export class SyncedStorageService implements StorageService {
   private local = new LocalStorageService()
   private remote = new SupabaseService()
@@ -43,9 +50,17 @@ export class SyncedStorageService implements StorageService {
   private timer: number | undefined
   private retryTimer: number | undefined
   private retryDelay = RETRY_BASE_MS // crece con cada fallo consecutivo (backoff)
+  // Última lectura del calendario de semanas anteriores (clave = usuario + lunes de esta semana),
+  // para no repetir la petición cada vez que se abre. Se vacía al cargar/cerrar sesión/borrar cuenta.
+  private weeksCache: { key: string; sessions: WorkoutSession[] } | null = null
 
   private get userId(): string | null {
     return isSupabaseConfigured ? (getSession()?.user.id ?? null) : null
+  }
+
+  // ¿Hay una cuenta en la nube detrás de los datos? (si no, todo vive en este dispositivo)
+  get usesCloud(): boolean {
+    return this.userId !== null
   }
 
   get hasUnsyncedChanges(): boolean {
@@ -62,6 +77,7 @@ export class SyncedStorageService implements StorageService {
     window.clearTimeout(this.retryTimer)
     this.remoteReady = false
     this.latest = null
+    this.weeksCache = null
 
     const local = await this.local.load()
     const uid = this.userId
@@ -139,6 +155,37 @@ export class SyncedStorageService implements StorageService {
     this.timer = window.setTimeout(() => void this.flush(), PUSH_DELAY_MS)
   }
 
+  // Sesiones del calendario de semanas anteriores (ver previousWeeksRange). Con sesión se piden a la
+  // nube bajo demanda, con una única petición por rango; sin sesión salen de localStorage. Si la
+  // nube no responde, o hay cambios locales que no se pudieron subir (la nube estaría desfasada),
+  // se usan los datos del dispositivo y se avisa con `fromDevice`. Nunca lanza.
+  async loadPreviousWeeksSessions(force = false): Promise<PreviousWeeksSessions> {
+    const { from, to } = previousWeeksRange()
+    const inRange = (s: WorkoutSession) => {
+      const t = new Date(s.date).getTime()
+      return t >= from.getTime() && t < to.getTime()
+    }
+    const fromDevice = async (): Promise<WorkoutSession[]> => (await this.local.load()).sessions.filter(inRange)
+
+    const uid = this.userId
+    if (!uid) return { sessions: await fromDevice(), fromDevice: false }
+
+    const key = `${uid}|${from.getTime()}`
+    if (!force && this.weeksCache?.key === key) return { sessions: this.weeksCache.sessions, fromDevice: false }
+
+    try {
+      if (this.hasUnsyncedChanges) await this.flush() // que la nube no vaya por detrás de lo local
+      if (!this.hasUnsyncedChanges) {
+        const sessions = await this.remote.loadSessionsBetween(from, to)
+        this.weeksCache = { key, sessions }
+        return { sessions, fromDevice: false }
+      }
+    } catch (e) {
+      console.error('No se pudo cargar el calendario desde la nube', e)
+    }
+    return { sessions: await fromDevice(), fromDevice: true }
+  }
+
   // Sube ya lo pendiente (sin esperar al debounce).
   async flush(): Promise<void> {
     window.clearTimeout(this.timer)
@@ -185,6 +232,7 @@ export class SyncedStorageService implements StorageService {
     ;[OWNER_KEY, UNSYNCED_KEY, BACKUP_KEY].forEach((k) => localStorage.removeItem(k))
     this.remoteReady = false
     this.latest = null
+    this.weeksCache = null
   }
 
   // Borra la cuenta: todos los datos en Supabase (ver SupabaseService.deleteAccount) y,
@@ -200,5 +248,6 @@ export class SyncedStorageService implements StorageService {
     ;[OWNER_KEY, UNSYNCED_KEY, BACKUP_KEY].forEach((k) => localStorage.removeItem(k))
     this.remoteReady = false
     this.latest = null
+    this.weeksCache = null
   }
 }

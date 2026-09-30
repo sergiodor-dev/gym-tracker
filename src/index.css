@@ -953,9 +953,6 @@ button.quick-link-hint { width: 100%; font: inherit; font-size: var(--fs-sm); te
   background: var(--card); border: 1px solid var(--border); font-weight: 600; font-size: var(--fs-md);
   box-shadow: var(--shadow-lg);
 }
-.spin { animation: spin 0.9s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
 .sk {
   display: block; border-radius: 8px;
   background: linear-gradient(90deg, var(--card-alt) 25%, var(--border) 50%, var(--card-alt) 75%);
