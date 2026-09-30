@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useAppData } from '../AppDataContext'
-import { WEEKDAY_NAMES, todayWeekday, addDays, startOfWeek, formatWeekdayDate } from '../utils/date'
+import { WEEKDAY_NAMES, todayWeekday, addDays, startOfWeek } from '../utils/date'
 import { isRoutineCompletedToday } from '../utils/sessions'
 import PageHeader from '../components/PageHeader'
 import { THEME } from '../theme'
 import Modal from '../components/Modal'
 import { Check, CheckCircle2, ChevronRight, History } from 'lucide-react'
+import DayLabel from '../components/DayLabel'
 import PreviousWeeksCalendar from '../components/PreviousWeeksCalendar'
 import { usePreviousWeeks } from '../hooks/usePreviousWeeks'
 import { storageService } from '../services'
@@ -76,11 +77,9 @@ export default function PlannerPage() {
             >
               <span className="timeline-dot" />
               <div className="timeline-card">
-                <div className="timeline-day-name-row">
-                  <span className="timeline-day-name">{formatWeekdayDate(dateOfDay(day))}</span>
-                  {completedToday && <CheckCircle2 size={15} className="day-completed-icon" />}
-                </div>
+                <DayLabel date={dateOfDay(day)} />
                 <span className="timeline-day-detail">{filled ? routineNames.join(' · ') : 'Descanso'}</span>
+                {completedToday && <CheckCircle2 size={16} className="day-completed-icon" aria-label="Completado" />}
               </div>
             </div>
           )

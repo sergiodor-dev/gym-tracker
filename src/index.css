@@ -382,7 +382,7 @@ button.danger-solid { background: var(--danger); border-color: var(--danger); co
 .timeline-dot {
   position: absolute;
   left: 7px;
-  top: 4px;
+  top: 17px;
   width: 18px;
   height: 18px;
   border-radius: 50%;
@@ -393,19 +393,21 @@ button.danger-solid { background: var(--danger); border-color: var(--danger); co
 .timeline-item.today .timeline-dot { border-color: var(--today); box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.28); }
 .timeline-item.today.filled .timeline-dot { background: var(--today); border-color: var(--today); }
 .timeline-card {
-  background: var(--card);
+  background: var(--card-alt);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 0.85rem 1rem;
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.8rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.8rem;
+  position: relative;
 }
+.timeline-item.filled .timeline-card { background: var(--accent-soft); border-color: var(--accent); }
 .timeline-item.today .timeline-card { border-color: var(--today); }
-.timeline-day-name-row { display: flex; align-items: center; gap: 0.5rem; }
-.timeline-day-name { font-weight: 700; font-size: 0.95rem; }
+.day-label { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; flex: none; min-width: 2.6rem; }
+.day-label .day-pill-name { color: var(--muted); }
+.day-label .day-pill-num { font-weight: 600; color: var(--text); }
+.timeline-item.filled .day-label .day-pill-num { color: var(--accent); }
 .today-badge {
   background: var(--today);
   color: var(--today-fg);
@@ -416,7 +418,7 @@ button.danger-solid { background: var(--danger); border-color: var(--danger); co
   padding: 0.15rem 0.45rem;
   border-radius: 999px;
 }
-.timeline-day-detail { font-size: var(--fs-sm); color: var(--muted); margin-top: 0.15rem; }
+.timeline-day-detail { flex: 1; min-width: 0; font-size: var(--fs-sm); color: var(--muted); font-weight: 600; }
 .timeline-item.filled .timeline-day-detail { color: var(--accent); }
 .day-completed-icon { color: var(--success); }
 
@@ -425,7 +427,9 @@ button.danger-solid { background: var(--danger); border-color: var(--danger); co
   .timeline::before { left: 8px; right: 8px; top: 15px; bottom: auto; width: auto; height: 2px; }
   .timeline-item { flex: 1; padding-left: 0; padding-top: 2.6rem; padding-bottom: 0; }
   .timeline-dot { left: 50%; top: 4px; transform: translateX(-50%); }
-  .timeline-card { flex-direction: column; align-items: flex-start; text-align: left; min-height: 88px; }
+  .timeline-card { flex-direction: column; justify-content: center; gap: 0.35rem; text-align: center; min-height: 88px; }
+  .timeline-day-detail { flex: none; }
+  .timeline-card .day-completed-icon { position: absolute; top: 0.45rem; right: 0.5rem; } /* no añade alto a la tarjeta de hoy */
 }
 
 .routine-picker { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem; }
@@ -908,14 +912,13 @@ button.quick-link-hint { width: 100%; font: inherit; font-size: var(--fs-sm); te
 .cal-week-title { font-size: var(--fs-sm); font-weight: 700; color: var(--muted); margin: 0 0 0.4rem; }
 .cal-week-grid { display: flex; flex-direction: column; gap: 0.3rem; }
 .cal-day {
-  display: flex; align-items: flex-start; gap: 0.6rem;
+  display: flex; align-items: center; gap: 0.8rem;
   background: var(--card-alt); border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 0.45rem 0.6rem;
+  padding: 0.45rem 0.8rem;
 }
 .cal-day.nodata { opacity: 0.55; }
-.cal-day-head { flex: 0 0 3.6rem; font-size: var(--fs-sm); font-weight: 700; padding-top: 0.15rem; }
 .cal-day-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.25rem; }
-.cal-rest { font-size: var(--fs-sm); color: var(--muted); padding-top: 0.15rem; }
+.cal-rest { font-size: var(--fs-sm); color: var(--muted); }
 
 .cal-pill {
   display: flex; align-items: center; gap: 0.35rem; min-width: 0;
@@ -933,10 +936,9 @@ button.quick-link-hint { width: 100%; font: inherit; font-size: var(--fs-sm); te
 
 @media (min-width: 768px) {
   .cal-week-grid { flex-direction: row; gap: 0.75rem; }
-  .cal-day { flex: 1; min-width: 0; flex-direction: column; gap: 0.35rem; min-height: 84px; padding: 0.6rem 0.65rem; }
-  .cal-day-head { flex: none; padding-top: 0; }
+  .cal-day { flex: 1; min-width: 0; flex-direction: column; justify-content: flex-start; gap: 0.35rem; min-height: 84px; padding: 0.6rem 0.65rem; }
   .cal-day-body { width: 100%; }
-  .cal-rest { padding-top: 0; }
+  .cal-rest { display: block; text-align: center; }
 }
 
 /* ---- Carga bajo demanda del calendario: esqueleto, botón flotante y aviso ---- */
@@ -960,7 +962,8 @@ button.quick-link-hint { width: 100%; font: inherit; font-size: var(--fs-sm); te
 }
 @keyframes sk-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 .sk-title { width: 7rem; height: 0.8rem; margin: 0 0 0.5rem; }
-.sk-head { width: 2.6rem; height: 0.8rem; margin-top: 0.2rem; }
+.sk-day-name { width: 1.6rem; height: 0.6rem; }
+.sk-day-num { width: 1.2rem; height: 0.8rem; }
 .sk-pill { width: 100%; height: 1.5rem; border-radius: 999px; }
 .sk-rest { width: 3.5rem; height: 0.7rem; margin-top: 0.2rem; opacity: 0.6; }
 

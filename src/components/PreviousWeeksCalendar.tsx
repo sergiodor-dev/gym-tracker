@@ -2,7 +2,8 @@ import { useMemo } from 'react'
 import { CheckCircle2, CloudDownload, Loader2, Minus, X } from 'lucide-react'
 import { useAppData } from '../AppDataContext'
 import { buildPreviousWeeks, type CalendarStatus } from '../utils/calendar'
-import { formatDayMonth, formatWeekdayDate, addDays } from '../utils/date'
+import { formatDayMonth, addDays } from '../utils/date'
+import DayLabel from './DayLabel'
 import type { WorkoutSession } from '../types'
 import type { PreviousWeeksStatus } from '../hooks/usePreviousWeeks'
 
@@ -32,7 +33,10 @@ function CalendarSkeleton() {
           <div className="cal-week-grid">
             {Array.from({ length: 7 }, (_, d) => (
               <div key={d} className="cal-day">
-                <span className="sk sk-head" />
+                <span className="day-label">
+                  <span className="sk sk-day-name" />
+                  <span className="sk sk-day-num" />
+                </span>
                 <div className="cal-day-body">
                   {(w + d) % 3 === 2 ? <span className="sk sk-rest" /> : <span className="sk sk-pill" />}
                 </div>
@@ -112,7 +116,7 @@ export default function PreviousWeeksCalendar({ status, sessions, fromDevice, on
               <div className="cal-week-grid">
                 {week.days.map((day) => (
                   <div key={day.date.getTime()} className={`cal-day${day.noData ? ' nodata' : ''}`}>
-                    <span className="cal-day-head">{formatWeekdayDate(day.date)}</span>
+                    <DayLabel date={day.date} />
                     <div className="cal-day-body">
                       {day.noData && <span className="cal-rest">Sin datos</span>}
                       {!day.noData && day.entries.length === 0 && <span className="cal-rest">Descanso</span>}
