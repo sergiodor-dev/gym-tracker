@@ -177,16 +177,6 @@ export class SupabaseService implements StorageService {
     return data
   }
 
-  // Sesiones con fecha en [from, to) leídas directamente de la nube (una sola petición GET con
-  // filtro por rango). No toca el snapshot ni el estado de la app: es una lectura independiente,
-  // pensada para vistas que se cargan bajo demanda (calendario de semanas anteriores).
-  async loadSessionsBetween(from: Date, to: Date): Promise<WorkoutSession[]> {
-    this.uid() // falla pronto si no hay sesión
-    const range = `date=gte.${encodeURIComponent(from.toISOString())}&date=lt.${encodeURIComponent(to.toISOString())}`
-    const rows = await rest<SessionRow[]>(`sessions?select=id,routine_id,date,exercise_logs&${range}&order=date.asc`)
-    return rows.map(toSession)
-  }
-
   // ¿Hay algo que subir? (comparación local, sin red)
   pendingChanges(data: AppData): boolean {
     const uid = this.uid()

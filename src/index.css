@@ -848,6 +848,15 @@ summary { cursor: pointer; color: var(--muted); font-weight: 600; }
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+.splash-skippable { cursor: pointer; }
+/* Zona de estado de sincronización (icono de carga, o aviso de error con sus botones). */
+.splash-status {
+  min-height: 6.5rem; margin-top: 1rem; display: flex; flex-direction: column; align-items: center;
+  justify-content: flex-start; gap: 0.8rem; max-width: 22rem;
+}
+.splash-loading { display: inline-flex; color: var(--accent); margin-top: 0.6rem; animation: splash-fade-up 0.4s ease-out 0.3s both; }
+.splash-status-text { margin: 0; font-size: var(--fs-md); color: var(--muted); }
+.splash-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
 
 /* ---- Progreso: tarjetas de resumen (volumen, sesiones, 1RM, récords) ---- */
 .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; margin: 0.9rem 0 0.5rem; }
@@ -874,7 +883,7 @@ summary { cursor: pointer; color: var(--muted); font-weight: 600; }
   background: rgba(249, 115, 22, 0.14); padding: 0.25rem 0.6rem; border-radius: 999px;
 }
 
-/* ---- Selector de día (registro retroactivo en Entrenar) ---- */
+/* ---- Selector de día (registro de días anteriores de la semana en Entrenar) ---- */
 .day-picker { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.35rem; margin: 0.7rem 0 0.9rem; }
 .day-pill {
   display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
@@ -917,6 +926,9 @@ button.quick-link-hint { width: 100%; font: inherit; font-size: var(--fs-sm); te
   padding: 0.45rem 0.8rem;
 }
 .cal-day.nodata { opacity: 0.55; }
+.cal-day.editable { cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease; }
+.cal-day.editable:hover { border-color: var(--accent); background: var(--accent-soft); }
+.cal-hint { margin: 0; }
 .cal-day-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.25rem; }
 .cal-rest { font-size: var(--fs-sm); color: var(--muted); }
 
@@ -929,10 +941,8 @@ button.quick-link-hint { width: 100%; font: inherit; font-size: var(--fs-sm); te
 .cal-pill svg { flex-shrink: 0; }
 .cal-pill.done { background: var(--success-soft); border-color: transparent; color: var(--success); }
 .cal-pill.partial { background: rgba(245, 158, 11, 0.16); border-color: transparent; color: #F59E0B; }
-.cal-pill.missed { background: rgba(255, 107, 107, 0.14); border-color: transparent; color: var(--danger); }
 .cal-legend .done { color: var(--success); }
 .cal-legend .partial { color: #F59E0B; }
-.cal-legend .missed { color: var(--danger); }
 
 @media (min-width: 768px) {
   .cal-week-grid { flex-direction: row; gap: 0.75rem; }
@@ -941,34 +951,22 @@ button.quick-link-hint { width: 100%; font: inherit; font-size: var(--fs-sm); te
   .cal-rest { display: block; text-align: center; }
 }
 
-/* ---- Carga bajo demanda del calendario: esqueleto, botón flotante y aviso ---- */
-.prev-weeks-stage { position: relative; }
-.prev-weeks-stage .prev-weeks { opacity: 0.6; }
-.prev-weeks-overlay {
-  position: absolute; inset: 0; display: flex; justify-content: center; align-items: flex-start;
-  padding-top: 3rem; pointer-events: none;
+/* ---- Editor de día (calendario de semanas anteriores) ---- */
+.day-editor-summary { margin: 0 0 0.8rem; }
+.back-link {
+  display: inline-flex; align-items: center; gap: 0.2rem; margin: 0 0 0.7rem; padding: 0.2rem 0.5rem 0.2rem 0.2rem;
+  background: transparent; border: none; color: var(--accent); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
 }
-.prev-weeks-overlay > * { pointer-events: auto; }
-.prev-weeks-load { padding: 0.7rem 1.2rem; border-radius: 999px; box-shadow: var(--shadow-lg); }
-.prev-weeks-loading {
-  display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.1rem; border-radius: 999px;
-  background: var(--card); border: 1px solid var(--border); font-weight: 600; font-size: var(--fs-md);
-  box-shadow: var(--shadow-lg);
+.inline-form-title { margin: 0 0 0.6rem; font-size: 1.05rem; font-weight: 700; }
+.inline-confirm {
+  align-self: stretch; padding: 0.8rem 0.9rem; border-radius: var(--radius-sm);
+  background: rgba(255, 107, 107, 0.08); border: 1px solid rgba(255, 107, 107, 0.4);
 }
-.sk {
-  display: block; border-radius: 8px;
-  background: linear-gradient(90deg, var(--card-alt) 25%, var(--border) 50%, var(--card-alt) 75%);
-  background-size: 200% 100%; animation: sk-shimmer 1.4s ease-in-out infinite;
-}
-@keyframes sk-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-.sk-title { width: 7rem; height: 0.8rem; margin: 0 0 0.5rem; }
-.sk-day-name { width: 1.6rem; height: 0.6rem; }
-.sk-day-num { width: 1.2rem; height: 0.8rem; }
-.sk-pill { width: 100%; height: 1.5rem; border-radius: 999px; }
-.sk-rest { width: 3.5rem; height: 0.7rem; margin-top: 0.2rem; opacity: 0.6; }
+.inline-confirm p { margin: 0 0 0.35rem; }
+.inline-confirm .modal-actions { margin-top: 0.7rem; }
 
-.prev-weeks-banner {
-  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
-  font-size: var(--fs-sm); color: var(--muted); background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.35); border-radius: var(--radius-sm); padding: 0.55rem 0.8rem; margin-bottom: 0.9rem;
+/* Texto solo para lectores de pantalla */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }

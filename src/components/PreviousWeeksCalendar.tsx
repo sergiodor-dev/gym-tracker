@@ -1,101 +1,39 @@
-import { useMemo } from 'react'
-import { CheckCircle2, CloudDownload, Loader2, Minus, X } from 'lucide-react'
+import { useMemo, type KeyboardEvent } from 'react'
+import { CheckCircle2, Minus } from 'lucide-react'
 import { useAppData } from '../AppDataContext'
 import { buildPreviousWeeks, type CalendarStatus } from '../utils/calendar'
-import { formatDayMonth, addDays } from '../utils/date'
+import { formatDayMonth, addDays, WEEKDAY_NAMES } from '../utils/date'
 import DayLabel from './DayLabel'
-import type { WorkoutSession } from '../types'
-import type { PreviousWeeksStatus } from '../hooks/usePreviousWeeks'
 
 const STATUS_LABEL: Record<CalendarStatus, string> = {
   done: 'Completada',
   partial: 'Incompleta',
-  missed: 'No realizada',
 }
-
-// Semanas que dibuja el esqueleto (no tienen por qué coincidir con las reales).
-const SKELETON_WEEKS = 3
 
 function StatusIcon({ status }: { status: CalendarStatus }) {
-  if (status === 'done') return <CheckCircle2 size={14} aria-hidden="true" />
-  if (status === 'partial') return <Minus size={14} aria-hidden="true" />
-  return <X size={14} aria-hidden="true" />
-}
-
-// Misma estructura que el calendario real (.cal-week-grid / .cal-day), para que al cargar no
-// "salte" el diseño tanto en móvil (filas) como en PC (columnas).
-function CalendarSkeleton() {
-  return (
-    <div className="prev-weeks" aria-hidden="true">
-      {Array.from({ length: SKELETON_WEEKS }, (_, w) => (
-        <section key={w}>
-          <span className="sk sk-title" />
-          <div className="cal-week-grid">
-            {Array.from({ length: 7 }, (_, d) => (
-              <div key={d} className="cal-day">
-                <span className="day-label">
-                  <span className="sk sk-day-name" />
-                  <span className="sk sk-day-num" />
-                </span>
-                <div className="cal-day-body">
-                  {(w + d) % 3 === 2 ? <span className="sk sk-rest" /> : <span className="sk sk-pill" />}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
-  )
+  return status === 'done' ? <CheckCircle2 size={14} aria-hidden="true" /> : <Minus size={14} aria-hidden="true" />
 }
 
 interface Props {
-  status: PreviousWeeksStatus
-  sessions: WorkoutSession[]
-  fromDevice: boolean
-  onLoad: (force?: boolean) => void
+  // Se llama al pulsar un día editable: PlannerPage abre el editor de ese día (DayEditorModal).
+  onSelectDay: (day: Date) => void
 }
 
-// Calendario de solo lectura con lo entrenado en las semanas anteriores (dentro de la ventana de
-// retención). Las sesiones se piden a la nube bajo demanda (ver usePreviousWeeks): hasta entonces
-// se ve un esqueleto con un botón para cargarlas; mientras llegan, el esqueleto con un indicador.
+// Calendario con lo registrado en las semanas anteriores (dentro de la ventana de retención). Solo
+// muestra las rutinas con sesión ese día, completadas o incompletas; los días sin sesión ponen "Sin
+// datos". Cada día se puede pulsar para ver su sesión, editarla o, si no hay ninguna, añadir los datos.
+// Se pinta con data.sessions, que ya contiene toda la ventana de retención, así que no hay carga aparte
+// y lo que se registre o se borre desde el editor de día se ve al instante.
 // Se usa tanto inline (PC) como dentro de un modal (móvil), ver PlannerPage.
-export default function PreviousWeeksCalendar({ status, sessions, fromDevice, onLoad }: Props) {
+export default function PreviousWeeksCalendar({ onSelectDay }: Props) {
   const { data } = useAppData()
   const weeks = useMemo(
-    () => (status === 'ready' ? buildPreviousWeeks({ routines: data.routines, weeklyPlan: data.weeklyPlan, sessions }) : []),
-    [status, data.routines, data.weeklyPlan, sessions],
+    () => buildPreviousWeeks({ routines: data.routines, sessions: data.sessions }),
+    [data.routines, data.sessions],
   )
-
-  if (status !== 'ready') {
-    return (
-      <div className="prev-weeks-stage" aria-busy={status === 'loading'}>
-        <CalendarSkeleton />
-        <div className="prev-weeks-overlay">
-          {status === 'loading' ? (
-            <span className="prev-weeks-loading" role="status">
-              <Loader2 size={18} className="spin" aria-hidden="true" /> Cargando semanas anteriores…
-            </span>
-          ) : (
-            <button type="button" className="prev-weeks-load" onClick={() => onLoad()}>
-              <CloudDownload size={16} className="inline-icon" aria-hidden="true" /> Cargar información de semanas anteriores
-            </button>
-          )}
-        </div>
-      </div>
-    )
-  }
 
   return (
     <>
-      {fromDevice && (
-        <div className="prev-weeks-banner" role="status">
-          <span>No se pudo consultar la nube: se muestran los datos de este dispositivo.</span>
-          <button type="button" onClick={() => onLoad(true)}>
-            Reintentar
-          </button>
-        </div>
-      )}
       {weeks.length === 0 ? (
         <p className="empty">Aún no hay sesiones registradas en semanas anteriores.</p>
       ) : (
@@ -107,6 +45,7 @@ export default function PreviousWeeksCalendar({ status, sessions, fromDevice, on
               </span>
             ))}
           </p>
+          <p className="muted small cal-hint">Toca un día para ver su sesión, editarla o añadir datos.</p>
 
           {weeks.map((week) => (
             <section key={week.monday.getTime()}>
@@ -114,26 +53,49 @@ export default function PreviousWeeksCalendar({ status, sessions, fromDevice, on
                 Semana del {formatDayMonth(week.monday)} al {formatDayMonth(addDays(week.monday, 6))}
               </h3>
               <div className="cal-week-grid">
-                {week.days.map((day) => (
-                  <div key={day.date.getTime()} className={`cal-day${day.noData ? ' nodata' : ''}`}>
-                    <DayLabel date={day.date} />
-                    <div className="cal-day-body">
-                      {day.noData && <span className="cal-rest">Sin datos</span>}
-                      {!day.noData && day.entries.length === 0 && <span className="cal-rest">Descanso</span>}
-                      {day.entries.map((entry) => (
-                        <span
-                          key={entry.routineId}
-                          className={`cal-pill ${entry.status}`}
-                          title={`${entry.name}: ${STATUS_LABEL[entry.status]}`}
-                          aria-label={`${entry.name}: ${STATUS_LABEL[entry.status]}`}
-                        >
-                          <StatusIcon status={entry.status} />
-                          <span className="cal-pill-name">{entry.name}</span>
-                        </span>
-                      ))}
+                {week.days.map((day) => {
+                  const dayName = `${WEEKDAY_NAMES[day.date.getDay()]} ${day.date.getDate()}`
+                  const summary =
+                    day.entries.length === 0
+                      ? 'sin datos'
+                      : day.entries.map((en) => `${en.name} ${STATUS_LABEL[en.status].toLowerCase()}`).join(', ')
+                  return (
+                    <div
+                      key={day.date.getTime()}
+                      className={`cal-day${day.entries.length === 0 ? ' nodata' : ''}${day.editable ? ' editable' : ''}`}
+                      {...(day.editable
+                        ? {
+                            role: 'button',
+                            tabIndex: 0,
+                            'aria-label': `${dayName}, ${summary}. Ver o editar la sesión`,
+                            onClick: () => onSelectDay(day.date),
+                            onKeyDown: (e: KeyboardEvent) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                onSelectDay(day.date)
+                              }
+                            },
+                          }
+                        : {})}
+                    >
+                      <DayLabel date={day.date} />
+                      <div className="cal-day-body">
+                        {day.entries.length === 0 && <span className="cal-rest">Sin datos</span>}
+                        {day.entries.map((entry) => (
+                          <span
+                            key={entry.routineId}
+                            className={`cal-pill ${entry.status}`}
+                            title={`${entry.name}: ${STATUS_LABEL[entry.status]}`}
+                            aria-label={`${entry.name}: ${STATUS_LABEL[entry.status]}`}
+                          >
+                            <StatusIcon status={entry.status} />
+                            <span className="cal-pill-name">{entry.name}</span>
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </section>
           ))}

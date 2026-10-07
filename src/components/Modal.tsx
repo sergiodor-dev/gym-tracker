@@ -15,10 +15,23 @@ interface ModalProps {
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
+// Pila de modales abiertos (el último es el de arriba). Con varios a la vez (p. ej. el editor de día
+// encima del calendario de semanas anteriores), Escape y el foco atrapado solo deben afectar al de arriba.
+const openModals: symbol[] = []
+
 export default function Modal({ title, onClose, children, tone = 'default', icon: Icon }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const previouslyFocused = useRef<Element | null>(null)
   const titleId = useId()
+  const modalId = useRef(Symbol('modal'))
+
+  useEffect(() => {
+    const id = modalId.current
+    openModals.push(id)
+    return () => {
+      openModals.splice(openModals.indexOf(id), 1)
+    }
+  }, [])
 
   // Al abrir: si nada dentro del modal ya tiene el foco (p.ej. un input con autoFocus),
   // lo lleva al propio diálogo para que el teclado y los lectores de pantalla no se queden
@@ -39,6 +52,7 @@ export default function Modal({ title, onClose, children, tone = 'default', icon
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if (openModals[openModals.length - 1] !== modalId.current) return
       if (e.key === 'Escape') {
         onClose()
         return

@@ -1,13 +1,13 @@
 import { AppData } from '../types'
-import { addDays, isSameDay, startOfWeek } from './date'
+import { addDays, isSameDay, sessionDateForDay, startOfWeek } from './date'
 import { PROGRESS_RETENTION_WEEKS } from './retention'
 import { isRoutineCompletedOn } from './sessions'
 
-// Estado de una rutina en un día pasado del calendario:
-// - done: hay sesión y tiene registro de todos los ejercicios de la rutina
-// - partial: hay sesión pero quedó a medias (el progreso se guarda ejercicio a ejercicio)
-// - missed: la rutina estaba planificada ese día de la semana y no hay sesión
-export type CalendarStatus = 'done' | 'partial' | 'missed'
+// Estado de una rutina en un día pasado del calendario, según lo que se registró ese día:
+// - done: la sesión tiene registro de todos los ejercicios de la rutina
+// - partial: hay sesión pero faltan ejercicios (el progreso se guarda ejercicio a ejercicio)
+// El calendario NO se compara con el plan semanal: solo muestra lo que realmente se registró.
+export type CalendarStatus = 'done' | 'partial'
 
 export interface CalendarEntry {
   routineId: string
@@ -17,10 +17,12 @@ export interface CalendarEntry {
 
 export interface CalendarDay {
   date: Date
+  // Rutinas con sesión registrada ese día (vacío = "Sin datos").
   entries: CalendarEntry[]
-  // Día fuera del historial disponible (más antiguo que la ventana de retención o anterior a la
-  // primera sesión registrada): no se puede saber qué pasó, así que no se marca nada como fallado.
-  noData: boolean
+  // ¿Se puede registrar o editar una sesión ese día? Hace falta que la fecha con la que se guardaría
+  // (mediodía local, ver sessionDateForDay) caiga dentro de la ventana de retención: si no, la sesión
+  // se descartaría nada más crearla (ver pruneOldSessions).
+  editable: boolean
 }
 
 export interface CalendarWeek {
@@ -29,35 +31,20 @@ export interface CalendarWeek {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000
-
-// Rango de fechas [from, to) que cubre el calendario: desde el lunes de hace `weeks` semanas hasta el
-// lunes de la semana en curso (excluido). Es lo único que hay que pedir a la nube para pintarlo.
-export function previousWeeksRange(
-  now: Date = new Date(),
-  weeks: number = PROGRESS_RETENTION_WEEKS,
-): { from: Date; to: Date } {
-  const to = startOfWeek(now)
-  return { from: addDays(to, -7 * weeks), to }
-}
+// Margen sobre el corte de retención para ofrecer un día como editable: pruneOldSessions se aplica
+// cada minuto, y no se quiere ofrecer un día cuya sesión caduca mientras se está editando.
+const EDITABLE_MARGIN_MS = 60 * 60 * 1000
 
 // Semanas anteriores a la actual (la más reciente primero), tantas como PROGRESS_RETENTION_WEEKS.
-// Se basa en `sessions`, que ya es lo que hay en Supabase (con sesión) o en localStorage (sin ella),
-// recortado a la ventana de retención. Cada sesión se sitúa por su fecha (día de calendario local).
-//
-// Las rutinas "planificadas" de cada día salen del plan semanal ACTUAL: no se guarda historial de
-// planes, así que si se cambia el plan, las semanas pasadas se comparan con el plan de hoy.
+// Se basa en `sessions`, que ya contiene toda la ventana de retención (viene de Supabase con sesión o
+// de localStorage sin ella). Cada sesión se sitúa por su fecha (día de calendario local).
 export function buildPreviousWeeks(
-  data: Pick<AppData, 'routines' | 'weeklyPlan' | 'sessions'>,
+  data: Pick<AppData, 'routines' | 'sessions'>,
   now: Date = new Date(),
   weeks: number = PROGRESS_RETENTION_WEEKS,
 ): CalendarWeek[] {
   // Mismo criterio de corte que pruneOldSessions.
   const cutoff = now.getTime() - weeks * 7 * DAY_MS
-  const firstSession = data.sessions.reduce((min, s) => {
-    const t = new Date(s.date).getTime()
-    return Number.isNaN(t) ? min : Math.min(min, t)
-  }, Infinity)
-
   const thisMonday = startOfWeek(now)
   const result: CalendarWeek[] = []
 
@@ -67,31 +54,19 @@ export function buildPreviousWeeks(
 
     for (let i = 0; i < 7; i++) {
       const date = addDays(monday, i)
-      const endOfDay = addDays(date, 1).getTime()
-      const noData = endOfDay <= cutoff || endOfDay <= firstSession
-
       const entries: CalendarEntry[] = []
-      if (!noData) {
-        // Planificadas ese día de la semana + las hechas aunque no estuvieran planificadas.
-        const planned = data.weeklyPlan[date.getDay()] ?? []
-        const done = data.sessions.filter((s) => isSameDay(s.date, date)).map((s) => s.routineId)
-        for (const routineId of new Set([...planned, ...done])) {
-          const routine = data.routines.find((r) => r.id === routineId)
-          if (!routine) continue // rutina eliminada: sus sesiones se conservan pero no hay nombre que mostrar
-          const hasSession = data.sessions.some((s) => s.routineId === routineId && isSameDay(s.date, date))
-          const status: CalendarStatus = isRoutineCompletedOn(routine, data.sessions, date)
-            ? 'done'
-            : hasSession
-              ? 'partial'
-              : 'missed'
-          entries.push({ routineId, name: routine.name, status })
-        }
+      for (const routine of data.routines) {
+        if (!data.sessions.some((s) => s.routineId === routine.id && isSameDay(s.date, date))) continue
+        const done = isRoutineCompletedOn(routine, data.sessions, date)
+        entries.push({ routineId: routine.id, name: routine.name, status: done ? 'done' : 'partial' })
       }
-      days.push({ date, entries, noData })
+      // Sesiones de rutinas eliminadas se conservan en el historial, pero no hay nombre que mostrar.
+      const editable = new Date(sessionDateForDay(date, now)).getTime() >= cutoff + EDITABLE_MARGIN_MS
+      days.push({ date, entries, editable })
     }
 
     // La semana más antigua puede quedar entera fuera de la ventana: no se muestra.
-    if (days.every((d) => d.noData)) continue
+    if (days.every((d) => !d.editable && d.entries.length === 0)) continue
     result.push({ monday, days })
   }
 

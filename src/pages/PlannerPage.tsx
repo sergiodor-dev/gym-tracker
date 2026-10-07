@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useAppData } from '../AppDataContext'
 import { WEEKDAY_NAMES, todayWeekday, addDays, startOfWeek } from '../utils/date'
 import { isRoutineCompletedToday } from '../utils/sessions'
@@ -8,27 +8,15 @@ import Modal from '../components/Modal'
 import { Check, CheckCircle2, ChevronRight, History } from 'lucide-react'
 import DayLabel from '../components/DayLabel'
 import PreviousWeeksCalendar from '../components/PreviousWeeksCalendar'
-import { usePreviousWeeks } from '../hooks/usePreviousWeeks'
-import { storageService } from '../services'
+import DayEditorModal from '../components/DayEditorModal'
 
 export default function PlannerPage() {
   const { data, setData } = useAppData()
   const [openDay, setOpenDay] = useState<number | null>(null)
   const [showPrevWeeks, setShowPrevWeeks] = useState(false)
+  // Día de una semana anterior que se está viendo/editando (se abre al pulsarlo en el calendario).
+  const [editingDay, setEditingDay] = useState<Date | null>(null)
   const today = todayWeekday()
-  const prevWeeks = usePreviousWeeks()
-  const { load: loadPrevWeeks } = prevWeeks
-
-  // Sin cuenta en la nube no hay llamadas que ahorrar (los datos salen de este dispositivo al
-  // instante), así que el calendario se rellena solo. Con cuenta, espera a que se pida.
-  useEffect(() => {
-    if (!storageService.usesCloud) void loadPrevWeeks()
-  }, [loadPrevWeeks])
-
-  function openPrevWeeks() {
-    setShowPrevWeeks(true)
-    void loadPrevWeeks()
-  }
 
   function toggleRoutineForDay(day: number, routineId: string) {
     setData((prev) => {
@@ -49,9 +37,9 @@ export default function PlannerPage() {
       <PageHeader title="Planificación" icon={THEME.planner.icon} color={THEME.planner} showBack={false} />
       <p className="muted">Toca un día para asignarle rutinas.</p>
 
-      {/* Móvil: el calendario de semanas anteriores se abre en un modal y se carga al pulsar (en PC va
-          debajo de la línea semanal, como esqueleto con un botón para cargarlo). */}
-      <button type="button" className="quick-link-hint prev-weeks-button" onClick={openPrevWeeks}>
+      {/* Móvil: el calendario de semanas anteriores se abre en un modal (en PC va siempre visible
+          debajo de la línea semanal). */}
+      <button type="button" className="quick-link-hint prev-weeks-button" onClick={() => setShowPrevWeeks(true)}>
         <span className="quick-link-hint-main">
           <History size={16} /> Consultar semanas anteriores
         </span>
@@ -89,24 +77,17 @@ export default function PlannerPage() {
       {/* PC: siempre visible debajo de la línea semanal. */}
       <section className="prev-weeks-inline">
         <h2 className="prev-weeks-title">Semanas anteriores</h2>
-        <PreviousWeeksCalendar
-          status={prevWeeks.status}
-          sessions={prevWeeks.sessions}
-          fromDevice={prevWeeks.fromDevice}
-          onLoad={loadPrevWeeks}
-        />
+        <PreviousWeeksCalendar onSelectDay={setEditingDay} />
       </section>
 
       {showPrevWeeks && (
         <Modal title="Semanas anteriores" icon={History} onClose={() => setShowPrevWeeks(false)}>
-          <PreviousWeeksCalendar
-            status={prevWeeks.status}
-            sessions={prevWeeks.sessions}
-            fromDevice={prevWeeks.fromDevice}
-            onLoad={loadPrevWeeks}
-          />
+          <PreviousWeeksCalendar onSelectDay={setEditingDay} />
         </Modal>
       )}
+
+      {/* Va después del modal de semanas anteriores (móvil) para quedar encima de él. */}
+      {editingDay && <DayEditorModal day={editingDay} onClose={() => setEditingDay(null)} />}
 
       {openDay !== null && (
         <Modal title={`${WEEKDAY_NAMES[openDay]} ${dateOfDay(openDay).getDate()}`} onClose={() => setOpenDay(null)}>
