@@ -55,7 +55,7 @@ export default function DayEditorModal({ day, onClose }: Props) {
     <Modal title={selected ? selected.name : title} icon={CalendarDays} onClose={onClose}>
       {selected ? (
         <>
-          <button type="button" className="back-link" onClick={() => setRoutineId(null)}>
+          <button type="button" className="inline-back" onClick={() => setRoutineId(null)}>
             <ChevronLeft size={16} /> {title}
           </button>
           <RoutineLogger routine={selected} day={day} presentation="inline" />

@@ -114,7 +114,7 @@ export default function RoutineLogger({ routine, day, presentation }: Props) {
   if (presentation === 'inline' && editingRe) {
     return (
       <div>
-        <button type="button" className="back-link" onClick={() => setEditingExerciseId(null)}>
+        <button type="button" className="inline-back" onClick={() => setEditingExerciseId(null)}>
           <ChevronLeft size={16} /> Volver a los ejercicios
         </button>
         <h3 className="inline-form-title">{editingName}</h3>

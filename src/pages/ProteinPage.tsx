@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { useAppData } from '../AppDataContext'
 import { generateId } from '../utils/id'
 import PageHeader from '../components/PageHeader'
 import Modal from '../components/Modal'
 import { THEME } from '../theme'
-import { Trash2, Calculator } from 'lucide-react'
+import { Trash2, Calculator, CheckCircle2 } from 'lucide-react'
 
 const QUICK_AMOUNTS = [10, 20, 30, 50]
 const FACTOR_OPTIONS = [
@@ -13,6 +13,10 @@ const FACTOR_OPTIONS = [
   { value: 2.0, label: '2.0 g/kg — hipertrofia' },
   { value: 2.2, label: '2.2 g/kg — definición' },
 ]
+
+// Geometría del anillo de progreso (viewBox 120×120).
+const RING_R = 52
+const RING_C = 2 * Math.PI * RING_R
 
 export default function ProteinPage() {
   const { data, setData } = useAppData()
@@ -27,6 +31,8 @@ export default function ProteinPage() {
   const target = protein.targetGrams
   const pct = target > 0 ? Math.min(100, Math.round((consumed / target) * 100)) : 0
   const remaining = Math.max(0, target - consumed)
+  const reached = target > 0 && consumed >= target
+  const themeVars = { '--t-fg': THEME.protein.fg } as CSSProperties
 
   function addGrams(grams: number) {
     if (grams <= 0) return
@@ -62,27 +68,52 @@ export default function ProteinPage() {
   }
 
   return (
-    <div className="page">
+    <div className="page" style={themeVars}>
       <PageHeader title="Proteína" icon={THEME.protein.icon} color={THEME.protein} />
       <p className="muted">Registra tu consumo de hoy. El contador se reinicia cada día a las 6:00.</p>
 
-      <div className="chart-card">
-        <div className="protein-summary-row">
-          <div>
-            <div className="protein-consumed">{consumed}<span className="protein-unit">g</span></div>
-            <div className="muted small">
-              {target > 0 ? `de ${target}g objetivo · quedan ${remaining}g` : 'Sin objetivo definido'}
-            </div>
+      <div className="tracker-hero">
+        <div
+          className="ring-gauge"
+          role="img"
+          aria-label={target > 0 ? `${consumed} de ${target} gramos, ${pct}%` : `${consumed} gramos, sin objetivo`}
+        >
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <defs>
+              <linearGradient id="proteinRing" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#FB7185" />
+                <stop offset="100%" stopColor={THEME.protein.fg} />
+              </linearGradient>
+            </defs>
+            <circle className="ring-track" cx="60" cy="60" r={RING_R} />
+            <circle
+              className="ring-fill"
+              cx="60"
+              cy="60"
+              r={RING_R}
+              strokeDasharray={RING_C}
+              strokeDashoffset={RING_C * (1 - pct / 100)}
+              transform="rotate(-90 60 60)"
+            />
+          </svg>
+          <div className="ring-center">
+            <span className="tracker-value">{consumed}<small>g</small></span>
+            <span className="muted small">{target > 0 ? `${pct}%` : 'sin objetivo'}</span>
           </div>
-          <button type="button" className="button-like" onClick={() => setCalcOpen(true)}>
+        </div>
+        <div className="tracker-info">
+          <div className="muted small">
+            {target > 0 ? `de ${target} g objetivo · quedan ${remaining} g` : 'Define un objetivo diario'}
+          </div>
+          {reached && (
+            <span className="tracker-done">
+              <CheckCircle2 size={16} /> ¡Objetivo cumplido!
+            </span>
+          )}
+          <button type="button" className="button-like tracker-calc" onClick={() => setCalcOpen(true)}>
             <Calculator size={16} className="inline-icon" /> Calcular objetivo
           </button>
         </div>
-        {target > 0 && (
-          <div className="protein-bar">
-            <div className="protein-bar-fill" style={{ width: `${pct}%` }} />
-          </div>
-        )}
       </div>
 
       <div className="form-field" style={{ marginTop: '1rem' }}>
@@ -96,36 +127,37 @@ export default function ProteinPage() {
         />
       </div>
 
-      <p className="muted small" style={{ marginTop: '1rem' }}>Añadir rápido</p>
-      <div className="row">
+      <p className="tracker-section-title">Añadir rápido</p>
+      <div className="protein-quick">
         {QUICK_AMOUNTS.map((g) => (
-          <button
-            key={g}
-            type="button"
-            onClick={() => addGrams(g)}
-            style={{ background: THEME.protein.fg, borderColor: THEME.protein.fg }}
-          >
-            +{g}g
+          <button key={g} type="button" className="pill" onClick={() => addGrams(g)}>
+            +{g} g
           </button>
         ))}
+      </div>
+      <div className="protein-custom">
         <input
           type="number"
           min={0}
           value={customAmount}
           onChange={(e) => setCustomAmount(e.target.value)}
-          placeholder="g"
-          style={{ width: '64px' }}
+          placeholder="Otra cantidad (g)"
+          style={{ width: '12rem' }}
         />
         <button type="button" className="button-like" onClick={addCustom}>Añadir</button>
       </div>
 
+      <p className="tracker-section-title">Tomas de hoy</p>
       <ul className="list">
-        {[...protein.entries].reverse().map((entry) => (
-          <li key={entry.id} className="list-item">
-            <div>
-              <strong>{entry.grams}g</strong>
-              <div className="muted small">
-                {new Date(entry.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        {[...protein.entries].reverse().map((entry, i) => (
+          <li key={entry.id} className="list-item tracker-entry">
+            <div className="tracker-entry-main">
+              <span className="tracker-entry-badge" aria-hidden="true">{protein.entries.length - i}</span>
+              <div>
+                <strong>{entry.grams} g</strong>
+                <div className="muted small">
+                  {new Date(entry.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
               </div>
             </div>
             <button type="button" className="icon-btn danger-icon" onClick={() => deleteEntry(entry.id)} aria-label="Eliminar registro">
@@ -158,7 +190,7 @@ export default function ProteinPage() {
             </select>
           </div>
           {Number(calcWeight) > 0 && (
-            <p className="muted">Objetivo sugerido: <strong>{Math.round(Number(calcWeight) * calcFactor)}g</strong> al día</p>
+            <p className="calc-result">Objetivo sugerido: <strong>{Math.round(Number(calcWeight) * calcFactor)} g</strong> al día</p>
           )}
           <div className="modal-actions">
             <button onClick={applyCalculator}>Usar este objetivo</button>

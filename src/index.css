@@ -513,26 +513,6 @@ summary { cursor: pointer; color: var(--muted); font-weight: 600; }
 .chart-svg { width: 100%; height: auto; display: block; }
 .chart-axis-label { font-size: 0.65rem; fill: var(--muted); }
 
-/* ----- Calculadora/registro de proteína ----- */
-.protein-summary-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
-.protein-consumed { font-size: 2rem; font-weight: 800; line-height: 1; color: var(--text); }
-.protein-unit { font-size: 1rem; font-weight: 700; color: var(--muted); margin-left: 0.2rem; }
-.protein-bar {
-  margin-top: 0.9rem;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--card-alt);
-  overflow: hidden;
-}
-.protein-bar-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent), var(--today));
-  transition: width 0.35s ease;
-}
-/* El registro de agua reutiliza las clases de proteína (.protein-*) con su propio color de barra. */
-.protein-bar-fill.water-bar-fill { background: linear-gradient(90deg, #22D3EE, var(--water, #0891B2)); }
-
 /* ----- Selector de ejercicio (modal) ----- */
 .picker-trigger {
   width: 100%;
@@ -955,7 +935,7 @@ button.quick-link-hint { width: 100%; font: inherit; font-size: var(--fs-sm); te
 
 /* ---- Editor de día (calendario de semanas anteriores) ---- */
 .day-editor-summary { margin: 0 0 0.8rem; }
-.back-link {
+.inline-back {
   display: inline-flex; align-items: center; gap: 0.2rem; margin: 0 0 0.7rem; padding: 0.2rem 0.5rem 0.2rem 0.2rem;
   background: transparent; border: none; color: var(--accent); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
 }
@@ -972,3 +952,76 @@ button.quick-link-hint { width: 100%; font: inherit; font-size: var(--fs-sm); te
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
   clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
+
+
+/* ============ Calculadoras de proteína y agua ============
+   Base común (.tracker-*) con el color de la sección en --t-fg (se fija en línea en cada página). */
+.tracker-hero {
+  /* --t-fg (color de la sección) lo fija en línea cada página; ver ProteinPage/WaterPage. */
+  position: relative; overflow: hidden; margin-top: 0.75rem; padding: 1.1rem;
+  border-radius: var(--radius-lg); border: 1px solid var(--border);
+  background: var(--card);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--t-fg) 16%, var(--card)), var(--card) 70%);
+  border-color: color-mix(in srgb, var(--t-fg) 35%, var(--border));
+  display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap;
+}
+.tracker-info { flex: 1 1 11rem; min-width: 0; display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; }
+.tracker-value { font-size: 2.2rem; font-weight: 800; line-height: 1; color: var(--text); }
+.tracker-value small { font-size: 1rem; font-weight: 700; color: var(--muted); margin-left: 0.2rem; }
+.tracker-done { display: inline-flex; align-items: center; gap: 0.3rem; font-size: var(--fs-sm); font-weight: 700; color: var(--t-fg); }
+.tracker-calc { margin-top: 0.4rem; border-color: color-mix(in srgb, var(--t-fg) 50%, var(--border)); color: var(--t-fg); }
+.tracker-section-title { margin: 1.2rem 0 0.4rem; font-size: var(--fs-sm); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.tracker-entry { border-left: 4px solid var(--t-fg); }
+.tracker-entry-main { display: flex; align-items: center; gap: 0.7rem; }
+.tracker-entry-badge {
+  width: 2rem; height: 2rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--t-fg) 18%, transparent); color: var(--t-fg); font-size: var(--fs-sm); font-weight: 800;
+}
+.calc-result {
+  margin: 0.6rem 0 0; padding: 0.7rem 0.9rem; border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--t-fg, var(--accent)) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--t-fg, var(--accent)) 40%, transparent);
+}
+.calc-result strong { color: var(--t-fg, var(--accent)); font-size: 1.15rem; }
+
+/* --- Proteína: anillo de progreso --- */
+.ring-gauge { position: relative; width: 9.5rem; height: 9.5rem; flex: 0 0 auto; }
+.ring-gauge svg { width: 100%; height: 100%; display: block; }
+.ring-track { fill: none; stroke: color-mix(in srgb, var(--t-fg) 18%, var(--card-alt)); stroke-width: 11; }
+.ring-fill { fill: none; stroke: url(#proteinRing); stroke-width: 11; stroke-linecap: round; transition: stroke-dashoffset 0.6s ease; }
+.ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; }
+.protein-quick { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.4rem 0 0.2rem; }
+.protein-quick .pill {
+  border-radius: 999px; padding: 0.55rem 1.05rem; font-weight: 800; letter-spacing: 0.01em;
+  background: var(--t-fg); border-color: var(--t-fg); color: #fff;
+}
+.protein-custom { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.6rem 0; }
+
+/* --- Agua: depósito que se llena, con oleaje --- */
+.water-tank {
+  position: relative; width: 6.6rem; height: 10.5rem; flex: 0 0 auto; overflow: hidden;
+  border: 3px solid color-mix(in srgb, var(--t-fg) 70%, #fff); border-radius: 1.4rem 1.4rem 2.2rem 2.2rem;
+  background: color-mix(in srgb, var(--t-fg) 10%, var(--card-alt));
+}
+.water-level {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(180deg, #22D3EE, var(--t-fg));
+  transition: height 0.7s ease;
+}
+.water-wave { position: absolute; left: 50%; top: -1.1rem; width: 14rem; height: 14rem; margin-left: -7rem; border-radius: 42%; animation: water-spin 7s linear infinite; }
+.water-wave.a { background: rgba(34, 211, 238, 0.45); }
+.water-wave.b { background: rgba(8, 145, 178, 0.35); top: -1.4rem; border-radius: 39%; animation-duration: 11s; animation-direction: reverse; }
+@keyframes water-spin { to { transform: rotate(360deg); } }
+.water-ticks { position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent calc(25% - 1px), rgba(255, 255, 255, 0.22) calc(25% - 1px), rgba(255, 255, 255, 0.22) 25%); }
+.water-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 800; color: #fff; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55); }
+.water-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin: 0.4rem 0 0.2rem; }
+.water-quick button {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0.2rem; min-height: 5rem;
+  padding: 0.55rem 0.2rem; border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--t-fg) 12%, var(--card)); border-color: color-mix(in srgb, var(--t-fg) 45%, var(--border)); color: var(--text);
+}
+.water-quick svg { color: var(--t-fg); }
+.water-quick .q-name { font-size: var(--fs-xs); color: var(--muted); }
+.water-quick .q-ml { font-weight: 800; font-size: var(--fs-sm); }
+@media (max-width: 380px) { .water-quick { grid-template-columns: repeat(2, 1fr); } }
