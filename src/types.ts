@@ -99,6 +99,33 @@ export const emptyWaterTracker: WaterTracker = {
   entries: [],
 }
 
+// ----- Pasos diarios -----
+// Igual que proteína y agua: un único registro con el día actual (mismo "día" con corte a las 6:00,
+// ver resyncStepsDay en utils/retention.ts). Cada caminata se guarda con el tiempo andado y la
+// velocidad; los pasos se estiman a partir de ellos y de la altura (ver utils/steps.ts).
+export interface StepEntry {
+  id: string
+  minutes: number // tiempo andado
+  speedKmh: number // velocidad media
+  time: string // ISO, cuándo se registró
+}
+
+export interface StepsTracker {
+  targetSteps: number // objetivo diario en pasos (0 = sin definir)
+  heightCm: number // altura, para estimar la longitud de zancada
+  dayKey: string // clave del día actual, ver proteinDayKey()
+  entries: StepEntry[] // caminatas del día actual
+}
+
+export const DEFAULT_HEIGHT_CM = 170
+
+export const emptyStepsTracker: StepsTracker = {
+  targetSteps: 0,
+  heightCm: DEFAULT_HEIGHT_CM,
+  dayKey: '',
+  entries: [],
+}
+
 // ----- Estructura completa exportable/importable en JSON -----
 export interface AppData {
   exercises: Exercise[]
@@ -107,6 +134,7 @@ export interface AppData {
   sessions: WorkoutSession[]
   protein: ProteinTracker
   water: WaterTracker
+  steps: StepsTracker
 }
 
 export const emptyAppData: AppData = {
@@ -116,4 +144,5 @@ export const emptyAppData: AppData = {
   sessions: [],
   protein: emptyProteinTracker,
   water: emptyWaterTracker,
+  steps: emptyStepsTracker,
 }

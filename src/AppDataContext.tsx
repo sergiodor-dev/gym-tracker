@@ -3,7 +3,7 @@ import { AppData, Exercise, emptyAppData } from './types'
 import { storageService } from './services'
 import { getSyncInfo } from './services/syncStatus'
 import { useAuth } from './AuthContext'
-import { pruneOldSessions, resyncProteinDay, resyncWaterDay } from './utils/retention'
+import { pruneOldSessions, resyncProteinDay, resyncStepsDay, resyncWaterDay } from './utils/retention'
 
 interface AppDataContextValue {
   data: AppData
@@ -36,6 +36,7 @@ function normalizeData(d: AppData): AppData {
     sessions: pruneOldSessions(d.sessions),
     protein: resyncProteinDay(d.protein),
     water: resyncWaterDay(d.water),
+    steps: resyncStepsDay(d.steps),
   }
 }
 
@@ -135,8 +136,16 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         const sessions = pruneOldSessions(prev.sessions)
         const protein = resyncProteinDay(prev.protein)
         const water = resyncWaterDay(prev.water)
-        if (sessions.length === prev.sessions.length && protein === prev.protein && water === prev.water) return prev
-        return { ...prev, sessions, protein, water }
+        const steps = resyncStepsDay(prev.steps)
+        if (
+          sessions.length === prev.sessions.length &&
+          protein === prev.protein &&
+          water === prev.water &&
+          steps === prev.steps
+        ) {
+          return prev
+        }
+        return { ...prev, sessions, protein, water, steps }
       })
     }, 60_000)
     return () => clearInterval(id)

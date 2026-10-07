@@ -28,7 +28,9 @@ function hasContent(d: AppData): boolean {
     d.protein.targetGrams > 0 ||
     d.protein.entries.length > 0 ||
     d.water.targetMl > 0 ||
-    d.water.entries.length > 0
+    d.water.entries.length > 0 ||
+    d.steps.targetSteps > 0 ||
+    d.steps.entries.length > 0
   )
 }
 

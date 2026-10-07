@@ -25,7 +25,6 @@ export default function BackupPage() {
     reader.onload = () => {
       try {
         const parsed = JSON.parse(reader.result as string) as AppData
-        // Se completan las claves que falten (p. ej. un backup anterior a la sección de proteína o de agua).
         setData(() => ({ ...structuredClone(emptyAppData), ...parsed }))
         alert('Datos importados correctamente.')
       } catch {

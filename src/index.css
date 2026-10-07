@@ -955,7 +955,7 @@ button.quick-link-hint { width: 100%; font: inherit; font-size: var(--fs-sm); te
 
 
 /* ============ Calculadoras de proteína y agua ============
-   Base común (.tracker-*) con el color de la sección en --t-fg (se fija en línea en cada página). */
+   Base común (.tracker-*) con el color de la sección en --t-fg (se fija en línea en cada página).*/
 .tracker-hero {
   /* --t-fg (color de la sección) lo fija en línea cada página; ver ProteinPage/WaterPage. */
   position: relative; overflow: hidden; margin-top: 0.75rem; padding: 1.1rem;
@@ -1025,3 +1025,64 @@ button.quick-link-hint { width: 100%; font: inherit; font-size: var(--fs-sm); te
 .water-quick .q-name { font-size: var(--fs-xs); color: var(--muted); }
 .water-quick .q-ml { font-weight: 800; font-size: var(--fs-sm); }
 @media (max-width: 380px) { .water-quick { grid-template-columns: repeat(2, 1fr); } }
+
+
+/* --- Pasos: camino con caminante hacia la meta --- */
+.steps-hero { flex-direction: column; align-items: stretch; gap: 0.9rem; }
+.steps-head { display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-start; }
+.steps-trail { position: relative; height: 3rem; margin: 0.2rem 1.9rem 0 1.1rem; }
+.steps-rail, .steps-rail-done { position: absolute; left: 0; top: 50%; height: 6px; transform: translateY(-50%); border-radius: 999px; }
+.steps-rail {
+  right: 0;
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--t-fg) 35%, var(--card-alt)) 0 10px, transparent 10px 18px);
+}
+.steps-rail-done { background: linear-gradient(90deg, #e4c37d, var(--t-fg)); transition: width 0.6s ease; }
+.steps-flag { position: absolute; right: -1.7rem; top: 50%; transform: translateY(-50%); color: var(--muted); display: inline-flex; }
+.steps-flag.reached { color: var(--t-fg); }
+.steps-walker {
+  position: absolute; top: 50%; transform: translate(-50%, -50%); transition: left 0.6s ease;
+  width: 2.3rem; height: 2.3rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--t-fg); color: #fff; box-shadow: 0 4px 14px color-mix(in srgb, var(--t-fg) 55%, transparent);
+}
+.steps-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+.steps-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 0.1rem; padding: 0.55rem 0.3rem; border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--t-fg) 12%, var(--card)); border: 1px solid color-mix(in srgb, var(--t-fg) 28%, var(--border));
+}
+.steps-stat strong { font-size: 1.05rem; font-weight: 800; }
+.steps-stat span { font-size: var(--fs-xs); color: var(--muted); }
+.steps-config { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 1rem; }
+.steps-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 0.6rem; }
+.steps-speed { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+.steps-speed-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 0.1rem; padding: 0.5rem 0.2rem; border-radius: var(--radius-sm);
+  background: var(--card); border-color: var(--border); color: var(--text); text-align: center;
+}
+.steps-speed-chip .chip-name { font-size: var(--fs-xs); font-weight: 700; line-height: 1.15; }
+.steps-speed-chip .chip-kmh { font-size: var(--fs-xs); color: var(--muted); }
+.steps-speed-chip.active { background: color-mix(in srgb, var(--t-fg) 20%, var(--card)); border-color: var(--t-fg); }
+.steps-speed-chip.active .chip-kmh { color: var(--text); }
+.steps-add-row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin: 0.7rem 0 0.2rem; flex-wrap: wrap; }
+.steps-add-row button:not(:disabled) { background: var(--t-fg); border-color: var(--t-fg); color: #fff; }
+@media (max-width: 380px) { .steps-speed { grid-template-columns: repeat(2, 1fr); } }
+
+/* Widget de Inicio */
+.steps-widget {
+  display: flex; align-items: center; gap: 0.9rem; margin-bottom: 1.5rem; padding: 1rem 1.15rem;
+  border-radius: var(--radius-lg); text-decoration: none; color: var(--text);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--t-fg) 22%, var(--card)), var(--card) 75%);
+  border: 1px solid color-mix(in srgb, var(--t-fg) 40%, var(--border)); box-shadow: var(--shadow);
+}
+.steps-widget-icon {
+  width: 2.8rem; height: 2.8rem; border-radius: 50%; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--t-fg); color: #fff;
+}
+.steps-widget-text { display: flex; flex-direction: column; gap: 0.1rem; flex: 1; min-width: 0; }
+.steps-widget-label { font-size: var(--fs-sm); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--t-fg); }
+.steps-widget-value { font-size: 1.35rem; font-weight: 800; line-height: 1.15; }
+.steps-widget-value small { font-size: var(--fs-sm); font-weight: 600; color: var(--muted); }
+.steps-widget-sub { font-size: var(--fs-sm); color: var(--muted); }
+.steps-widget-bar { display: block; height: 6px; margin-top: 0.35rem; border-radius: 999px; background: color-mix(in srgb, var(--t-fg) 18%, var(--card-alt)); overflow: hidden; }
+.steps-widget-bar-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #e4c37d, var(--t-fg)); transition: width 0.6s ease; }
+.steps-widget-check { color: var(--t-fg); flex-shrink: 0; }
+.steps-widget-chevron { color: var(--muted); flex-shrink: 0; }

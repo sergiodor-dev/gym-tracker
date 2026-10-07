@@ -7,6 +7,7 @@ import { todayWeekday } from '../utils/date'
 import { isRoutineCompletedToday } from '../utils/sessions'
 import { plannedStreak, weeklyAdherence } from '../utils/stats'
 import { THEME } from '../theme'
+import StepsWidget from '../components/StepsWidget'
 
 const sections = [
   { to: '/exercises', theme: THEME.exercises, title: 'Ejercicios', subtitle: 'Tu catálogo de ejercicios' },
@@ -44,20 +45,6 @@ export default function HomePage() {
         <h1>Vamos a entrenar</h1>
       </div>
 
-      <Link to="/train" className="train-widget">
-        <span className="train-widget-icon">
-          <THEME.train.icon size={24} strokeWidth={2.2} />
-        </span>
-        <span className="train-widget-text">
-          <span className="train-widget-label">Entrenar hoy</span>
-          <span className="train-widget-value">
-            {routinesToday.length > 0 ? routinesToday.map((r) => r.name).join(' · ') : 'Día de descanso'}
-          </span>
-        </span>
-        {allCompletedToday && <CheckCircle2 size={22} className="train-widget-check" />}
-        <ChevronRight size={22} className="train-widget-chevron" />
-      </Link>
-
       {adherence.planned > 0 && (
         <div className="week-card">
           <div className="week-card-head">
@@ -84,6 +71,22 @@ export default function HomePage() {
         </div>
       )}
 
+      <Link to="/train" className="train-widget">
+        <span className="train-widget-icon">
+          <THEME.train.icon size={24} strokeWidth={2.2} />
+        </span>
+        <span className="train-widget-text">
+          <span className="train-widget-label">Entrenar hoy</span>
+          <span className="train-widget-value">
+            {routinesToday.length > 0 ? routinesToday.map((r) => r.name).join(' · ') : 'Día de descanso'}
+          </span>
+        </span>
+        {allCompletedToday && <CheckCircle2 size={22} className="train-widget-check" />}
+        <ChevronRight size={22} className="train-widget-chevron" />
+      </Link>
+
+      <StepsWidget />
+
       <div className="card-grid">
         {sections.map((s) => (
           <Link key={s.to} to={s.to} className="section-card">
@@ -95,7 +98,6 @@ export default function HomePage() {
           </Link>
         ))}
       </div>
-      <p className="app-version">v{__APP_VERSION__}</p>
     </div>
   )
 }

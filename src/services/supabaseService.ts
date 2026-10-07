@@ -4,11 +4,13 @@ import {
   MuscleGroup,
   ProteinEntry,
   WaterEntry,
+  StepEntry,
   RoutineExercise,
   WeeklyPlan,
   WorkoutSession,
   emptyProteinTracker,
   emptyWaterTracker,
+  emptyStepsTracker,
 } from '../types'
 import { StorageService } from './storageService'
 import { getSession } from './supabase/auth'
@@ -24,7 +26,7 @@ import { rest } from './supabase/rest'
 // Estrategia de conflictos: "el último en escribir gana", fila a fila.
 
 type Row = Record<string, unknown>
-type TableName = 'exercises' | 'routines' | 'weekly_plan' | 'sessions' | 'protein' | 'water'
+type TableName = 'exercises' | 'routines' | 'weekly_plan' | 'sessions' | 'protein' | 'water' | 'steps'
 type Collected = Record<TableName, Map<string, Row>>
 type Snapshot = Record<TableName, Map<string, string>>
 
@@ -96,6 +98,22 @@ const TABLES: Record<TableName, TableSpec> = {
         [uid, { user_id: uid, target_ml: d.water.targetMl, day_key: d.water.dayKey, entries: d.water.entries }],
       ]),
   },
+  steps: {
+    keyColumn: 'user_id',
+    collect: (d, uid) =>
+      new Map<string, Row>([
+        [
+          uid,
+          {
+            user_id: uid,
+            target_steps: d.steps.targetSteps,
+            height_cm: d.steps.heightCm,
+            day_key: d.steps.dayKey,
+            entries: d.steps.entries,
+          },
+        ],
+      ]),
+  },
 }
 
 const TABLE_NAMES = Object.keys(TABLES) as TableName[]
@@ -136,6 +154,7 @@ interface WeeklyPlanRow { weekday: number; routine_ids: string[] }
 interface SessionRow { id: string; routine_id: string; date: string; exercise_logs: ExerciseLog[] }
 interface ProteinRow { target_grams: number; day_key: string; entries: ProteinEntry[] }
 interface WaterRow { target_ml: number; day_key: string; entries: WaterEntry[] }
+interface StepsRow { target_steps: number; height_cm: number; day_key: string; entries: StepEntry[] }
 
 const DELETE_CHUNK = 100
 
@@ -161,17 +180,18 @@ export class SupabaseService implements StorageService {
     return session.user.id
   }
 
-  // Descarga todo el estado de la cuenta (6 peticiones en paralelo) y lo toma como
+  // Descarga todo el estado de la cuenta (7 peticiones en paralelo) y lo toma como
   // punto de partida para calcular futuras diferencias.
   async load(): Promise<AppData> {
     const uid = this.uid()
-    const [exercises, routines, weeklyPlan, sessions, protein, water] = await Promise.all([
+    const [exercises, routines, weeklyPlan, sessions, protein, water, steps] = await Promise.all([
       rest<ExerciseRow[]>('exercises?select=id,name,muscle_group&order=position.asc'),
       rest<RoutineRow[]>('routines?select=id,name,exercises&order=position.asc'),
       rest<WeeklyPlanRow[]>('weekly_plan?select=weekday,routine_ids'),
       rest<SessionRow[]>('sessions?select=id,routine_id,date,exercise_logs&order=date.asc'),
       rest<ProteinRow[]>('protein?select=target_grams,day_key,entries'),
       rest<WaterRow[]>('water?select=target_ml,day_key,entries'),
+      rest<StepsRow[]>('steps?select=target_steps,height_cm,day_key,entries'),
     ])
 
     const data: AppData = {
@@ -185,6 +205,14 @@ export class SupabaseService implements StorageService {
       water: water[0]
         ? { targetMl: Number(water[0].target_ml), dayKey: water[0].day_key, entries: water[0].entries }
         : structuredClone(emptyWaterTracker),
+      steps: steps[0]
+        ? {
+            targetSteps: Number(steps[0].target_steps),
+            heightCm: Number(steps[0].height_cm),
+            dayKey: steps[0].day_key,
+            entries: steps[0].entries,
+          }
+        : structuredClone(emptyStepsTracker),
     }
 
     this.setSnapshot(data, uid)
