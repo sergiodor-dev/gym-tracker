@@ -11,10 +11,8 @@ import { THEME } from '../theme'
 const sections = [
   { to: '/exercises', theme: THEME.exercises, title: 'Ejercicios', subtitle: 'Tu catálogo de ejercicios' },
   { to: '/routines', theme: THEME.routines, title: 'Rutinas', subtitle: 'Crea y edita rutinas' },
-  { to: '/planner', theme: THEME.planner, title: 'Planificación', subtitle: 'Tu línea de tiempo semanal' },
-  { to: '/progress', theme: THEME.progress, title: 'Progreso', subtitle: 'Consulta tu evolución' },
   { to: '/protein', theme: THEME.protein, title: 'Proteína', subtitle: 'Calculadora y registro diario' },
-  { to: '/account', theme: THEME.account, title: 'Cuenta', subtitle: 'Sincroniza entre dispositivos' },
+  { to: '/water', theme: THEME.water, title: 'Agua', subtitle: 'Calculadora y registro diario' },
 ]
 
 export default function HomePage() {
@@ -97,6 +95,7 @@ export default function HomePage() {
           </Link>
         ))}
       </div>
+      <p className="app-version">v{__APP_VERSION__}</p>
     </div>
   )
 }

@@ -26,7 +26,9 @@ function hasContent(d: AppData): boolean {
     d.sessions.length > 0 ||
     Object.values(d.weeklyPlan).some((ids) => ids.length > 0) ||
     d.protein.targetGrams > 0 ||
-    d.protein.entries.length > 0
+    d.protein.entries.length > 0 ||
+    d.water.targetMl > 0 ||
+    d.water.entries.length > 0
   )
 }
 

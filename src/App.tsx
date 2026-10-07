@@ -11,6 +11,7 @@ import PlannerPage from './pages/PlannerPage'
 import ProgressPage from './pages/ProgressPage'
 import BackupPage from './pages/BackupPage'
 import ProteinPage from './pages/ProteinPage'
+import WaterPage from './pages/WaterPage'
 import AccountPage from './pages/AccountPage'
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
               <Route path="/progress" element={<ProgressPage />} />
               <Route path="/backup" element={<BackupPage />} />
               <Route path="/protein" element={<ProteinPage />} />
+              <Route path="/water" element={<WaterPage />} />
               <Route path="/account" element={<AccountPage />} />
             </Route>
 

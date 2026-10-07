@@ -1,4 +1,4 @@
-import { ProteinTracker, WorkoutSession } from '../types'
+import { ProteinTracker, WaterTracker, WorkoutSession } from '../types'
 import { proteinDayKey } from './date'
 
 // Ventana de retención del historial de entrenamientos (sesiones).
@@ -33,4 +33,12 @@ export function resyncProteinDay(protein: ProteinTracker): ProteinTracker {
   const currentDayKey = proteinDayKey()
   if (protein.dayKey === currentDayKey) return protein
   return { ...protein, dayKey: currentDayKey, entries: [] }
+}
+
+// Igual que resyncProteinDay para el contador de agua: comparte el mismo "día" (corte a las 6 AM,
+// ver proteinDayKey). Al cambiar de día se vacían los registros y se conserva el objetivo diario.
+export function resyncWaterDay(water: WaterTracker): WaterTracker {
+  const currentDayKey = proteinDayKey()
+  if (water.dayKey === currentDayKey) return water
+  return { ...water, dayKey: currentDayKey, entries: [] }
 }

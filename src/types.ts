@@ -78,6 +78,27 @@ export const emptyProteinTracker: ProteinTracker = {
   entries: [],
 }
 
+// ----- Calculadora de agua diaria -----
+// Igual que la de proteína: solo se guarda el consumo del día actual (mismo "día" con corte a las
+// 6:00, ver resyncWaterDay en utils/retention.ts) y el objetivo diario configurado.
+export interface WaterEntry {
+  id: string
+  ml: number
+  time: string // ISO
+}
+
+export interface WaterTracker {
+  targetMl: number // objetivo diario en mililitros (0 = sin definir)
+  dayKey: string // clave del día actual, ver proteinDayKey()
+  entries: WaterEntry[] // registros del día actual
+}
+
+export const emptyWaterTracker: WaterTracker = {
+  targetMl: 0,
+  dayKey: '',
+  entries: [],
+}
+
 // ----- Estructura completa exportable/importable en JSON -----
 export interface AppData {
   exercises: Exercise[]
@@ -85,6 +106,7 @@ export interface AppData {
   weeklyPlan: WeeklyPlan
   sessions: WorkoutSession[]
   protein: ProteinTracker
+  water: WaterTracker
 }
 
 export const emptyAppData: AppData = {
@@ -93,4 +115,5 @@ export const emptyAppData: AppData = {
   weeklyPlan: {},
   sessions: [],
   protein: emptyProteinTracker,
+  water: emptyWaterTracker,
 }

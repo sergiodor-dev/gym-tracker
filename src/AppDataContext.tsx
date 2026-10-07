@@ -3,7 +3,7 @@ import { AppData, Exercise, emptyAppData } from './types'
 import { storageService } from './services'
 import { getSyncInfo } from './services/syncStatus'
 import { useAuth } from './AuthContext'
-import { pruneOldSessions, resyncProteinDay } from './utils/retention'
+import { pruneOldSessions, resyncProteinDay, resyncWaterDay } from './utils/retention'
 
 interface AppDataContextValue {
   data: AppData
@@ -28,10 +28,15 @@ const SAVE_DEBOUNCE_MS = 400
 type Updater = (prev: AppData) => AppData
 
 // Recorta el historial a la ventana de retención (PROGRESS_RETENTION_WEEKS) y comprueba que el
-// contador de proteína siga correspondiendo al día actual. Se aplica a todo dato que entra al
+// contador de proteína y el de agua sigan correspondiendo al día actual. Se aplica a todo dato que entra al
 // estado: lo cargado del storage y cada actualización (incluida una importación de JSON).
 function normalizeData(d: AppData): AppData {
-  return { ...d, sessions: pruneOldSessions(d.sessions), protein: resyncProteinDay(d.protein) }
+  return {
+    ...d,
+    sessions: pruneOldSessions(d.sessions),
+    protein: resyncProteinDay(d.protein),
+    water: resyncWaterDay(d.water),
+  }
 }
 
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
@@ -121,7 +126,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [reload])
 
-  // Revisa cada minuto si el "día de proteína" ha cambiado (corte a las 6 AM) y si alguna
+  // Revisa cada minuto si el "día de proteína"/agua ha cambiado (corte a las 6 AM) y si alguna
   // sesión ha salido de la ventana de retención, por si la app se queda abierta sin que haya
   // otra actualización que dispare esas comprobaciones.
   useEffect(() => {
@@ -129,8 +134,9 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setDataState((prev) => {
         const sessions = pruneOldSessions(prev.sessions)
         const protein = resyncProteinDay(prev.protein)
-        if (sessions.length === prev.sessions.length && protein === prev.protein) return prev
-        return { ...prev, sessions, protein }
+        const water = resyncWaterDay(prev.water)
+        if (sessions.length === prev.sessions.length && protein === prev.protein && water === prev.water) return prev
+        return { ...prev, sessions, protein, water }
       })
     }, 60_000)
     return () => clearInterval(id)

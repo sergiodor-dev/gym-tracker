@@ -530,6 +530,8 @@ summary { cursor: pointer; color: var(--muted); font-weight: 600; }
   background: linear-gradient(90deg, var(--accent), var(--today));
   transition: width 0.35s ease;
 }
+/* El registro de agua reutiliza las clases de proteína (.protein-*) con su propio color de barra. */
+.protein-bar-fill.water-bar-fill { background: linear-gradient(90deg, #22D3EE, var(--water, #0891B2)); }
 
 /* ----- Selector de ejercicio (modal) ----- */
 .picker-trigger {
