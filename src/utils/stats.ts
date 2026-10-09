@@ -1,4 +1,5 @@
-import { Routine, SetLog, WeeklyPlan, WorkoutSession } from '../types'
+import { ExerciseLog, Routine, SetLog, WeeklyPlan, WorkoutSession } from '../types'
+import { routineProgress } from './sessions'
 import { addDays, localDayKey, startOfWeek } from './date'
 import { PROGRESS_RETENTION_WEEKS } from './retention'
 
@@ -92,32 +93,31 @@ export function groupRecordsByLog(events: RecordEvent[]): Map<string, RecordKind
 
 // ---- Adherencia y racha ----
 
-// Un entreno planificado cuenta como cumplido si ese día se registró al menos esta fracción de
-// los ejercicios que la rutina tiene ahora. No se exige el 100 % para que saltarse un último
-// ejercicio no anule el día, y para que añadir ejercicios a una rutina más adelante no "descumpla"
-// entrenos pasados. Pon 1 para exigir la rutina entera.
+// Un entreno planificado cuenta como cumplido si ese día se registró al menos esta fracción de las
+// series OBLIGATORIAS que la rutina tiene ahora (las opcionales no cuentan; sin obligatorias, basta
+// con alguna serie). No se exige el 100 % para que saltarse una última serie no anule el día, y para
+// que añadir series a una rutina más adelante no "descumpla" entrenos pasados. Pon 1 para exigir todas.
 export const ADHERENCE_MIN_COMPLETION = 0.5
 
-// Índice "rutina|día" -> ejercicios registrados ese día (une varias sesiones del mismo día, por si
+// Índice "rutina|día" -> registros de ejercicio de ese día (une varias sesiones del mismo día, por si
 // hubiera duplicados tras sincronizar dos dispositivos).
-function indexLoggedExercises(sessions: WorkoutSession[]): Map<string, Set<string>> {
-  const index = new Map<string, Set<string>>()
+function indexLoggedExercises(sessions: WorkoutSession[]): Map<string, ExerciseLog[]> {
+  const index = new Map<string, ExerciseLog[]>()
   for (const s of sessions) {
     const time = new Date(s.date)
     if (Number.isNaN(time.getTime())) continue
     const key = `${s.routineId}|${localDayKey(time)}`
-    const set = index.get(key) ?? new Set<string>()
-    for (const log of s.exerciseLogs) if (log.sets.length > 0) set.add(log.exerciseId)
-    index.set(key, set)
+    index.set(key, [...(index.get(key) ?? []), ...s.exerciseLogs.filter((l) => l.sets.length > 0)])
   }
   return index
 }
 
-function isRoutineDone(routine: Routine, day: Date, index: Map<string, Set<string>>): boolean {
-  const logged = index.get(`${routine.id}|${localDayKey(day)}`)
-  if (!logged) return false
-  const covered = routine.exercises.filter((re) => logged.has(re.exerciseId)).length
-  return covered >= Math.ceil(routine.exercises.length * ADHERENCE_MIN_COMPLETION)
+function isRoutineDone(routine: Routine, day: Date, index: Map<string, ExerciseLog[]>): boolean {
+  const logs = index.get(`${routine.id}|${localDayKey(day)}`)
+  if (!logs) return false
+  const p = routineProgress(routine, logs)
+  if (p.requiredTotal === 0) return p.done > 0
+  return p.requiredDone >= Math.ceil(p.requiredTotal * ADHERENCE_MIN_COMPLETION)
 }
 
 // Rutinas planificadas para un día de la semana. Se ignoran las que ya no existen o no tienen

@@ -19,13 +19,28 @@ export interface Exercise {
   muscleGroup: MuscleGroup | ''
 }
 
+// Un elemento de la rutina es UNA serie concreta de un ejercicio. La rutina es una lista ordenada de
+// estos elementos, así que las series de distintos ejercicios se pueden intercalar (A, B, A, B…) y
+// cada una se registra y se reordena por separado. Añadir un ejercicio con 4 series crea 4 elementos.
 export interface RoutineExercise {
+  id: string // id del elemento (de esta serie), único dentro de la rutina
+  exerciseId: string
+  reps: number // repeticiones objetivo
+  weight: number // kg objetivo
+  required: boolean // obligatoria (cuenta para completar la rutina) u opcional
+}
+
+// Formato anterior (un elemento por ejercicio con nº de series). Ya no se crea, pero puede llegar de
+// localStorage, de un backup JSON o de la nube; ver utils/routineItems.ts, que lo convierte.
+export interface LegacyRoutineExercise {
   exerciseId: string
   defaultSets: number
   defaultReps: number
-  defaultWeight: number // kg
+  defaultWeight: number
 }
 
+// El campo se sigue llamando `exercises` (y la columna routines.exercises de Supabase, jsonb) para no
+// tener que migrar la base de datos: solo cambia la forma de cada elemento.
 export interface Routine {
   id: string
   name: string
@@ -42,6 +57,9 @@ export interface WeeklyPlan {
 export interface SetLog {
   reps: number
   weight: number
+  // Elemento de la rutina (RoutineExercise.id) al que corresponde esta serie. Las series registradas
+  // antes de este cambio no lo tienen; ver matchLoggedSets en utils/sessions.ts.
+  itemId?: string
 }
 
 export interface ExerciseLog {

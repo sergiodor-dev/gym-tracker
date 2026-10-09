@@ -4,6 +4,7 @@ import { storageService } from './services'
 import { getSyncInfo } from './services/syncStatus'
 import { useAuth } from './AuthContext'
 import { pruneOldSessions, resyncProteinDay, resyncStepsDay, resyncWaterDay } from './utils/retention'
+import { normalizeRoutines } from './utils/routineItems'
 
 interface AppDataContextValue {
   data: AppData
@@ -28,11 +29,13 @@ const SAVE_DEBOUNCE_MS = 400
 type Updater = (prev: AppData) => AppData
 
 // Recorta el historial a la ventana de retención (PROGRESS_RETENTION_WEEKS) y comprueba que el
-// contador de proteína y el de agua sigan correspondiendo al día actual. Se aplica a todo dato que entra al
+// contador de proteína y el de agua sigan correspondiendo al día actual, y convierte las rutinas del
+// formato antiguo (ejercicio con N series) al de una serie por elemento. Se aplica a todo dato que entra al
 // estado: lo cargado del storage y cada actualización (incluida una importación de JSON).
 function normalizeData(d: AppData): AppData {
   return {
     ...d,
+    routines: normalizeRoutines(d.routines),
     sessions: pruneOldSessions(d.sessions),
     protein: resyncProteinDay(d.protein),
     water: resyncWaterDay(d.water),

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Minus } from 'lucide-react'
 import { useAppData } from '../AppDataContext'
 import { isSameDay, MONTH_SHORT, WEEKDAY_NAMES } from '../utils/date'
-import { isRoutineCompletedOn } from '../utils/sessions'
+import { routineProgress } from '../utils/sessions'
 import type { CalendarStatus } from '../utils/calendar'
 import type { Routine } from '../types'
 import Modal from './Modal'
@@ -41,14 +41,13 @@ export default function DayEditorModal({ day, onClose }: Props) {
   const hasAnySession = shown.length > 0
 
   function statusOf(r: Routine): CalendarStatus {
-    return isRoutineCompletedOn(r, data.sessions, day) ? 'done' : 'partial'
+    const session = data.sessions.find((s) => s.routineId === r.id && isSameDay(s.date, day))
+    return session && routineProgress(r, session.exerciseLogs).completed ? 'done' : 'partial'
   }
 
   function loggedCount(r: Routine): number {
     const session = data.sessions.find((s) => s.routineId === r.id && isSameDay(s.date, day))
-    if (!session) return 0
-    const logged = new Set(session.exerciseLogs.map((l) => l.exerciseId))
-    return r.exercises.filter((re) => logged.has(re.exerciseId)).length
+    return session ? routineProgress(r, session.exerciseLogs).done : 0
   }
 
   return (
@@ -79,7 +78,7 @@ export default function DayEditorModal({ day, onClose }: Props) {
                     <div>
                       <strong>{r.name}</strong>
                       <div className="muted small">
-                        {loggedCount(r)}/{r.exercises.length} ejercicios registrados
+                        {loggedCount(r)}/{r.exercises.length} series registradas
                       </div>
                     </div>
                     <span className={`cal-pill ${status}`}>

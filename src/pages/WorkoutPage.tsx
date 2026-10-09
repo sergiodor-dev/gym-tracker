@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useAppData } from '../AppDataContext'
 import { isRoutineCompletedOn } from '../utils/sessions'
+import { countExercises } from '../utils/routineItems'
 import { addDays, localDayKey, startOfWeek, WEEKDAY_NAMES, WEEKDAY_SHORT } from '../utils/date'
 import PageHeader from '../components/PageHeader'
 import RoutineLogger from '../components/RoutineLogger'
@@ -102,7 +103,7 @@ export default function WorkoutPage() {
             <li key={r.id} className="list-item selectable" onClick={() => setActiveRoutineId(r.id)}>
               <div>
                 <strong>{r.name}</strong>
-                <span className="tag">{r.exercises.length} ejercicios</span>
+                <span className="tag">{countExercises(r.exercises)} ejercicios</span>
               </div>
               {completed ? (
                 <span className="status-badge success"><CheckCircle2 size={15} /> Completada</span>

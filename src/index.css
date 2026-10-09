@@ -483,7 +483,7 @@ button.danger-solid { background: var(--danger); border-color: var(--danger); co
   100% { transform: scale(1); opacity: 1; }
 }
 
-.routine-status { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; margin: 0.75rem 0 1.1rem; }
+.routine-status { display: flex; flex-direction: column; align-items: flex-start; gap: 0.6rem; margin: 0.75rem 0 1.1rem; }
 .routine-status > p.muted { margin: 0; }
 
 .completion-banner {
@@ -1086,3 +1086,78 @@ button.quick-link-hint { width: 100%; font: inherit; font-size: var(--fs-sm); te
 .steps-widget-bar-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #e4c37d, var(--t-fg)); transition: width 0.6s ease; }
 .steps-widget-check { color: var(--t-fg); flex-shrink: 0; }
 .steps-widget-chevron { color: var(--muted); flex-shrink: 0; }
+
+/* ----- Rutinas: series obligatorias / opcionales ----- */
+.tag.tag-optional { color: var(--muted); background: var(--card-alt); }
+.required-cell { text-align: center; }
+.required-cell input[type="checkbox"], .check-row input[type="checkbox"] { width: 1.15rem; height: 1.15rem; accent-color: var(--accent); }
+.check-row { display: flex; align-items: center; gap: 0.6rem; font-size: var(--fs-md); margin-bottom: 0.9rem; cursor: pointer; }
+
+/* ----- Entrenar: fila de serie compacta ----- */
+.set-title { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.set-title .tag { margin-left: 0; }
+.set-pills { display: flex; gap: 0.35rem; margin-top: 0.4rem; }
+.set-pill {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--card-alt);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.set-pills.logged .set-pill { color: var(--success); background: var(--success-soft); border-color: transparent; }
+
+/* ----- Formulario de una serie: reps y peso en línea, más grandes ----- */
+.set-fields { display: flex; justify-content: center; gap: 1rem; margin: 0.5rem 0 0.25rem; }
+.set-fields .form-field { width: 8rem; margin-bottom: 0.9rem; align-items: center; }
+.set-fields .form-field label { text-align: center; }
+.set-fields input.numeric-input {
+  width: 100%;
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 0.6rem 0.4rem;
+}
+
+/* ----- Entrenar: título del día y barras de progreso ----- */
+.routine-day-title { margin: 0; font-size: 1.5rem; font-weight: 800; line-height: 1.2; display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+.routine-day-today { color: var(--accent); }
+.progress-bars { display: flex; gap: 0.5rem; width: 100%; align-self: stretch; }
+.progress-bar {
+  flex-basis: 0;
+  min-width: 0;
+  height: 0.65rem;
+  border-radius: 999px;
+  background: var(--card-alt);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.progress-bar.optional { border-style: dashed; border-color: var(--accent); }
+.progress-bar-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.3s ease; }
+.progress-bar.optional .progress-bar-fill { background: var(--muted); }
+.list-item.optional { border: 2px dashed var(--border); }
+
+/* Cabecera del día (título + reiniciar) y recuento bajo las barras */
+.routine-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; width: 100%; }
+.routine-reset-btn { margin-left: auto; padding: 0.35rem 0.7rem; font-size: var(--fs-sm); flex-shrink: 0; }
+.progress-counts { margin: -0.2rem 0 0; font-size: var(--fs-sm); font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Series seguidas del mismo ejercicio: línea en el margen izquierdo que las une (el hueco entre filas es 0.6rem) */
+.list-item.link-prev, .list-item.link-next { position: relative; }
+.list-item.link-prev::before, .list-item.link-next::before {
+  content: '';
+  position: absolute;
+  left: -0.55rem;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--accent);
+  opacity: 0.6;
+  top: 50%;
+  bottom: 50%;
+}
+.list-item.link-next::before { bottom: -0.6rem; }
+.list-item.link-prev::before { top: -0.6rem; }
+.list-item.link-prev:not(.link-next)::before { bottom: 50%; }
+.list-item.link-next:not(.link-prev)::before { top: 50%; }

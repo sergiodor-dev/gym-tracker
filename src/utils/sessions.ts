@@ -1,21 +1,80 @@
-import { Routine, SetLog, WorkoutSession } from '../types'
+import { ExerciseLog, Routine, SetLog, WorkoutSession } from '../types'
 import { isSameDay } from './date'
 
-// Una rutina cuenta como "completada" en un día cuando existe una sesión de ese día para ella
-// Y esa sesión tiene un registro para cada uno de los ejercicios que la rutina tiene
-// actualmente. No basta con que exista la sesión: desde que el progreso se guarda
-// ejercicio a ejercicio (ver WorkoutPage.saveExercise/persistSession), puede haber una
-// sesión a medio completar.
+// Enlaza las series registradas con los elementos (series) de la rutina: itemId -> serie registrada.
+//  · Una serie con `itemId` se enlaza con ese elemento (si la rutina aún lo tiene).
+//  · Las series antiguas, sin `itemId`, se reparten por orden entre los elementos del mismo ejercicio
+//    que sigan sin registro (la 1.ª serie antigua con el 1.er elemento de ese ejercicio, etc.), de modo
+//    que el historial anterior al cambio sigue contando como registrado.
+// Las series de elementos que ya no están en la rutina se ignoran.
+export function matchLoggedSets(routine: Pick<Routine, 'exercises'>, logs: ExerciseLog[]): Map<string, SetLog> {
+  const matched = new Map<string, SetLog>()
+  const itemIds = new Set(routine.exercises.map((it) => it.id))
+  const legacy = new Map<string, SetLog[]>()
+
+  for (const log of logs) {
+    for (const set of log.sets) {
+      if (set.itemId) {
+        if (itemIds.has(set.itemId) && !matched.has(set.itemId)) matched.set(set.itemId, set)
+      } else {
+        legacy.set(log.exerciseId, [...(legacy.get(log.exerciseId) ?? []), set])
+      }
+    }
+  }
+  for (const item of routine.exercises) {
+    if (matched.has(item.id)) continue
+    const set = legacy.get(item.exerciseId)?.shift()
+    if (set) matched.set(item.id, set)
+  }
+  return matched
+}
+
+export interface RoutineProgress {
+  matched: Map<string, SetLog>
+  total: number
+  done: number
+  requiredTotal: number
+  requiredDone: number
+  optionalTotal: number
+  optionalDone: number
+  completed: boolean
+}
+
+// Progreso de una rutina a partir de los registros de un día. Una rutina está completada cuando todas
+// sus series OBLIGATORIAS están registradas; las opcionales no cuentan. Si no tiene ninguna
+// obligatoria, basta con haber registrado alguna serie.
+export function routineProgress(routine: Pick<Routine, 'exercises'>, logs: ExerciseLog[]): RoutineProgress {
+  const matched = matchLoggedSets(routine, logs)
+  const required = routine.exercises.filter((it) => it.required)
+  const optional = routine.exercises.filter((it) => !it.required)
+  const requiredDone = required.filter((it) => matched.has(it.id)).length
+  const optionalDone = optional.filter((it) => matched.has(it.id)).length
+  const done = requiredDone + optionalDone
+  const completed =
+    routine.exercises.length > 0 && (required.length > 0 ? requiredDone === required.length : done > 0)
+  return {
+    matched,
+    total: routine.exercises.length,
+    done,
+    requiredTotal: required.length,
+    requiredDone,
+    optionalTotal: optional.length,
+    optionalDone,
+    completed,
+  }
+}
+
+// Una rutina cuenta como "completada" en un día cuando existe una sesión de ese día para ella y están
+// registradas todas sus series obligatorias (ver routineProgress). No basta con que exista la sesión:
+// el progreso se guarda serie a serie, así que puede haber una sesión a medio completar.
 export function isRoutineCompletedOn(
   routine: Pick<Routine, 'id' | 'exercises'>,
   sessions: WorkoutSession[],
   day: Date,
 ): boolean {
-  if (routine.exercises.length === 0) return false
   const session = sessions.find((s) => s.routineId === routine.id && isSameDay(s.date, day))
   if (!session) return false
-  const loggedIds = new Set(session.exerciseLogs.map((el) => el.exerciseId))
-  return routine.exercises.every((re) => loggedIds.has(re.exerciseId))
+  return routineProgress(routine, session.exerciseLogs).completed
 }
 
 export const isRoutineCompletedToday = (
