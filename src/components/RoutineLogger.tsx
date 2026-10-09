@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CheckCircle2, ChevronLeft, RotateCcw, Trophy } from 'lucide-react'
 import { useAppData } from '../AppDataContext'
-import { addDays, isSameDay, localDayKey, relativeDayLabel, sessionDateForDay, WEEKDAY_NAMES } from '../utils/date'
+import { addDays, isSameDay, localDayKey, sessionDateForDay, WEEKDAY_NAMES } from '../utils/date'
 import { findLastExerciseLog, matchLoggedSets, routineProgress } from '../utils/sessions'
 import { setOrdinals } from '../utils/routineItems'
 import { detectRecords, groupRecordsByLog, maxWeightOf, recordKey } from '../utils/stats'
